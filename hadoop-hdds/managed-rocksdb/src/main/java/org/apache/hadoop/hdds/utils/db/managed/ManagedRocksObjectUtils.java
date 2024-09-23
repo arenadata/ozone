@@ -24,6 +24,7 @@ import org.apache.ratis.util.UncheckedAutoCloseable;
 import org.awaitility.Awaitility;
 import org.awaitility.core.ConditionTimeoutException;
 import org.rocksdb.RocksDB;
+import org.rocksdb.util.Environment;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -121,5 +122,12 @@ public final class ManagedRocksObjectUtils {
    */
   public static void loadRocksDBLibrary() {
     RocksDB.loadLibrary();
+  }
+
+  /**
+   * Returns RocksDB library file name.
+   */
+  public static String getRocksDBLibFileName() {
+    return Environment.getJniLibraryFileName("rocksdb");
   }
 }
