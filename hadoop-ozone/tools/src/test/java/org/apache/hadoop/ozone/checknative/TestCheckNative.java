@@ -19,7 +19,12 @@
 package org.apache.hadoop.ozone.checknative;
 
 import org.apache.hadoop.ozone.shell.checknative.CheckNative;
+
+import static org.apache.hadoop.hdds.utils.NativeConstants.ROCKS_TOOLS_NATIVE_LIBRARY_NAME;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.apache.ozone.test.tag.Native;
+
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;
@@ -59,7 +64,24 @@ public class TestCheckNative {
     assertTrue(stdOut.contains("Native library checking:"));
     assertTrue(stdOut.contains("hadoop: false"));
     assertTrue(stdOut.contains("ISA-L: false"));
+    assertTrue(stdOut.contains("rocks-tools: false"));
+
   }
+
+  @Native(ROCKS_TOOLS_NATIVE_LIBRARY_NAME)
+  @Test
+  public void testCheckNativeRocksToolsLoaded() throws UnsupportedEncodingException {
+    outputStream.reset();
+    new CheckNative()
+        .run(new String[] {});
+    // trims multiple spaces
+    String stdOut = outputStream.toString(DEFAULT_ENCODING)
+        .replaceAll(" +", " ");
+    assertThat(stdOut).contains("Native library checking:");
+    assertThat(stdOut).contains("hadoop: false");
+    assertThat(stdOut).contains("ISA-L: false");
+    assertThat(stdOut).contains("rocks-tools: true");
+    }
 
   @AfterEach
   public void setUp() {
