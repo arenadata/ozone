@@ -81,7 +81,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
     <ratis.thirdparty.version>1.0.6</ratis.thirdparty.version>
 
     <!-- Apache Ranger plugin version -->
-    <ranger.version>2.3.0</ranger.version>
+    <ranger.version>2.4.0</ranger.version>
 
     <distMgmtSnapshotsId>apache.snapshots.https</distMgmtSnapshotsId>
     <distMgmtSnapshotsName>Apache Development Snapshot Repository</distMgmtSnapshotsName>
@@ -98,7 +98,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
     <shell-executable>bash</shell-executable>
 
     <!-- Set the Release year during release -->
-    <release-year>2019</release-year>
+    <release-year>2024</release-year>
 
     <failIfNoTests>false</failIfNoTests>
     <surefire.failIfNoSpecifiedTests>false</surefire.failIfNoSpecifiedTests>
@@ -212,7 +212,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
 
     <compile-testing.version>0.19</compile-testing.version>
     <errorprone-annotations.version>2.2.0</errorprone-annotations.version>
-    <guava.version>32.0.0-jre</guava.version>
+    <guava.version>32.0.1-jre</guava.version>
     <guice.version>5.1.0</guice.version>
     <gson.version>2.9.0</gson.version>
 
