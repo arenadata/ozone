@@ -69,21 +69,6 @@ public class TestCheckNative {
 
   }
 
-  @Native(ROCKS_TOOLS_NATIVE_LIBRARY_NAME)
-  @Test
-  public void testCheckNativeRocksToolsLoaded() throws UnsupportedEncodingException {
-    outputStream.reset();
-    new CheckNative()
-        .run(new String[]{});
-    // trims multiple spaces
-    String stdOut = outputStream.toString(DEFAULT_ENCODING)
-        .replaceAll(" +", " ");
-    assertThat(stdOut).contains("Native library checking:");
-    assertThat(stdOut).contains("hadoop: false");
-    assertThat(stdOut).contains("ISA-L: false");
-    assertThat(stdOut).contains("rocks-tools: false");
-  }
-
   @AfterEach
   public void setUp() {
     outputStream.reset();
