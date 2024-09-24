@@ -20,11 +20,7 @@ package org.apache.hadoop.ozone.checknative;
 
 import org.apache.hadoop.ozone.shell.checknative.CheckNative;
 
-import static org.apache.hadoop.hdds.utils.NativeConstants.ROCKS_TOOLS_NATIVE_LIBRARY_NAME;
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import org.apache.ozone.test.tag.Native;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.AfterEach;
