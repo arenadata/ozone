@@ -58,6 +58,7 @@ import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.client.ObjectStore;
 import org.apache.hadoop.ozone.client.OzoneBucket;
+import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneKeyDetails;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.client.rpc.RpcClient;
@@ -150,7 +151,7 @@ public class TestOmContainerLocationCache {
   private static final DatanodeDetails DN2 =
       MockDatanodeDetails.createDatanodeDetails(UUID.randomUUID());
   private static final AtomicLong CONTAINER_ID = new AtomicLong(1);
-
+  private static OzoneClient ozoneClient;
 
   @BeforeAll
   public static void setUp() throws Exception {
@@ -169,6 +170,7 @@ public class TestOmContainerLocationCache {
     OmTestManagers omTestManagers = new OmTestManagers(conf,
         mockScmBlockLocationProtocol, mockScmContainerClient);
     om = omTestManagers.getOzoneManager();
+    ozoneClient = omTestManagers.getRpcClient();
     metadataManager = omTestManagers.getMetadataManager();
 
     rpcClient = new RpcClient(conf, null) {
@@ -189,6 +191,7 @@ public class TestOmContainerLocationCache {
 
   @AfterAll
   public static void cleanup() throws Exception {
+    ozoneClient.close();
     om.stop();
     FileUtils.deleteDirectory(dir);
   }

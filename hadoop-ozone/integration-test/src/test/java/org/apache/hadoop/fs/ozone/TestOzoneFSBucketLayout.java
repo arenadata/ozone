@@ -125,8 +125,16 @@ class TestOzoneFSBucketLayout {
   void fileSystemWithUnsupportedDefaultBucketLayout(String layout) {
     OzoneConfiguration conf = configWithDefaultBucketLayout(layout);
 
-    OMException e = assertThrows(OMException.class,
-        () -> FileSystem.newInstance(conf));
+    OMException e = assertThrows(OMException.class, () -> {
+      FileSystem fileSystem = null;
+      try {
+        fileSystem = FileSystem.newInstance(conf);
+      } finally {
+        if (fileSystem != null) {
+          fileSystem.close();
+        }
+      }
+    });
     assertThat(e.getMessage(),
         containsString(ERROR_MAP.get(layout)));
   }
