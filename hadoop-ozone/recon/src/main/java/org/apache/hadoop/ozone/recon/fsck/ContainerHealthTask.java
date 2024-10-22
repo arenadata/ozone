@@ -53,6 +53,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.ozone.recon.ReconConstants.CONTAINER_COUNT;
+import static org.apache.hadoop.ozone.recon.ReconConstants.DEFAULT_FETCH_COUNT;
 import static org.apache.hadoop.ozone.recon.ReconConstants.TOTAL_KEYS;
 import static org.apache.hadoop.ozone.recon.ReconConstants.TOTAL_USED_BYTES;
 
@@ -65,6 +66,7 @@ public class ContainerHealthTask extends ReconScmTask {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(ContainerHealthTask.class);
+  public static final int FETCH_COUNT = Integer.parseInt(DEFAULT_FETCH_COUNT);
 
   private ReadWriteLock lock = new ReentrantReadWriteLock(true);
 
@@ -131,8 +133,24 @@ public class ContainerHealthTask extends ReconScmTask {
       LOG.info("Container Health task thread took {} milliseconds to" +
               " process {} existing database records.",
           Time.monotonicNow() - start, existingCount);
+
+      checkAndProcessContainers(unhealthyContainerStateStatsMap, currentTime);
+      processedContainers.clear();
+    } finally {
+      lock.writeLock().unlock();
+    }
+  }
+
+  private void checkAndProcessContainers(
+      Map<UnHealthyContainerStates, Map<String, Long>>
+          unhealthyContainerStateStatsMap, long currentTime) {
+    ContainerID startID = ContainerID.valueOf(1);
+    List<ContainerInfo> containers = containerManager.getContainers(startID,
+        FETCH_COUNT);
+    long start;
+    long iterationCount = 0;
+    while (!containers.isEmpty()) {
       start = Time.monotonicNow();
-      final List<ContainerInfo> containers = containerManager.getContainers();
       containers.stream()
           .filter(c -> !processedContainers.contains(c))
           .forEach(c -> processContainer(c, currentTime,
@@ -142,10 +160,19 @@ public class ContainerHealthTask extends ReconScmTask {
               " processing {} containers.", Time.monotonicNow() - start,
           containers.size());
       logUnhealthyContainerStats(unhealthyContainerStateStatsMap);
-      processedContainers.clear();
-    } finally {
-      lock.writeLock().unlock();
+      if (containers.size() >= FETCH_COUNT) {
+        startID = ContainerID.valueOf(
+            containers.get(containers.size() - 1).getContainerID() + 1);
+        containers = containerManager.getContainers(startID, FETCH_COUNT);
+      } else {
+        containers.clear();
+      }
+      iterationCount++;
     }
+    LOG.info(
+        "Container Health task thread took {} iterations to fetch all " +
+            "containers using batched approach with batch size of {}",
+        iterationCount, FETCH_COUNT);
   }
 
   private void logUnhealthyContainerStats(
@@ -184,6 +211,8 @@ public class ContainerHealthTask extends ReconScmTask {
         UnHealthyContainerStates.OVER_REPLICATED, new HashMap<>());
     unhealthyContainerStateStatsMap.put(
         UnHealthyContainerStates.MIS_REPLICATED, new HashMap<>());
+    unhealthyContainerStateStatsMap.put(
+        UnHealthyContainerStates.NEGATIVE_SIZE, new HashMap<>());
   }
 
   private ContainerHealthStatus setCurrentContainer(long recordId)
@@ -280,12 +309,20 @@ public class ContainerHealthTask extends ReconScmTask {
   private void processContainer(ContainerInfo container, long currentTime,
                                 Map<UnHealthyContainerStates,
                                     Map<String, Long>>
-                                      unhealthyContainerStateStatsMap) {
+                                    unhealthyContainerStateStatsMap) {
     try {
       Set<ContainerReplica> containerReplicas =
           containerManager.getContainerReplicas(container.containerID());
       ContainerHealthStatus h = new ContainerHealthStatus(container,
           containerReplicas, placementPolicy, reconContainerMetadataManager);
+
+      // Handle negative sized containers separately
+      if (h.getContainer().getUsedBytes() < 0) {
+        handleNegativeSizedContainers(h, currentTime,
+            unhealthyContainerStateStatsMap);
+        return;
+      }
+
       if (h.isHealthy() || h.isDeleted()) {
         return;
       }
@@ -329,6 +366,32 @@ public class ContainerHealthTask extends ReconScmTask {
           " Container Health task", e);
     }
     return false;
+  }
+
+  /**
+   * This method is used to handle containers with negative sizes. It logs an
+   * error message and inserts a record into the UNHEALTHY_CONTAINERS table.
+   * @param containerHealthStatus
+   * @param currentTime
+   * @param unhealthyContainerStateStatsMap
+   */
+  private void handleNegativeSizedContainers(
+      ContainerHealthStatus containerHealthStatus, long currentTime,
+      Map<UnHealthyContainerStates, Map<String, Long>>
+          unhealthyContainerStateStatsMap) {
+    ContainerInfo container = containerHealthStatus.getContainer();
+    LOG.error(
+        "Container {} has negative size. Please visit Recon's unhealthy " +
+            "container endpoint for more details.",
+        container.getContainerID());
+    UnhealthyContainers record =
+        ContainerHealthRecords.recordForState(containerHealthStatus,
+            UnHealthyContainerStates.NEGATIVE_SIZE, currentTime);
+    List<UnhealthyContainers> records = Collections.singletonList(record);
+    populateContainerStats(containerHealthStatus,
+        UnHealthyContainerStates.NEGATIVE_SIZE,
+        unhealthyContainerStateStatsMap);
+    containerHealthSchemaManager.insertUnhealthyContainerRecords(records);
   }
 
   /**

@@ -17,6 +17,9 @@
 
 package org.apache.hadoop.ozone.om;
 
+import static org.apache.ozone.test.GenericTestUtils.waitFor;
+
+import java.util.concurrent.TimeoutException;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.scm.HddsWhiteboxTestUtils;
@@ -24,9 +27,11 @@ import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
 import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneClientFactory;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
 import org.apache.hadoop.hdds.security.token.OzoneBlockTokenSecretManager;
+import org.apache.hadoop.ozone.om.ratis.OzoneManagerRatisServer.RaftServerStatus;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.mockito.Mockito;
 
@@ -43,10 +48,11 @@ public final class OmTestManagers {
   private KeyManager keyManager;
   private OMMetadataManager metadataManager;
   private KeyProviderCryptoExtension kmsProvider;
-  private VolumeManager volumeManager;
-  private BucketManager bucketManager;
-  private PrefixManager prefixManager;
-  private ScmBlockLocationProtocol scmBlockClient;
+  private final VolumeManager volumeManager;
+  private final BucketManager bucketManager;
+  private final PrefixManager prefixManager;
+  private final ScmBlockLocationProtocol scmBlockClient;
+  private final OzoneClient rpcClient;
 
   public OzoneManager getOzoneManager() {
     return om;
@@ -71,6 +77,9 @@ public final class OmTestManagers {
   }
   public ScmBlockLocationProtocol getScmBlockClient() {
     return scmBlockClient;
+  }
+  public OzoneClient getRpcClient() {
+    return rpcClient;
   }
 
   public OmTestManagers(OzoneConfiguration conf)
@@ -110,7 +119,17 @@ public final class OmTestManagers {
         "secretManager", Mockito.mock(OzoneBlockTokenSecretManager.class));
 
     om.start();
-    writeClient = OzoneClientFactory.getRpcClient(conf)
+    try {
+      waitFor(() -> om.getOmRatisServer().checkLeaderStatus() == RaftServerStatus.LEADER_AND_READY,
+          10, 10_000);
+    } catch (TimeoutException e) {
+      throw new RuntimeException(e);
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+
+    rpcClient = OzoneClientFactory.getRpcClient(conf);
+    writeClient = rpcClient
         .getObjectStore().getClientProxy().getOzoneManagerClient();
     metadataManager = (OmMetadataManagerImpl) HddsWhiteboxTestUtils
         .getInternalState(om, "metadataManager");

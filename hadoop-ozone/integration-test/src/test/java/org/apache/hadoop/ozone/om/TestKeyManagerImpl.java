@@ -72,6 +72,7 @@ import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
 import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
+import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
@@ -166,6 +167,7 @@ public class TestKeyManagerImpl {
   private static final String VERSIONED_BUCKET_NAME = "versionedBucket1";
   private static final String VOLUME_NAME = "vol1";
   private static OzoneManagerProtocol writeClient;
+  private static OzoneClient rpcClient;
   private static OzoneManager om;
 
   @BeforeAll
@@ -211,6 +213,7 @@ public class TestKeyManagerImpl {
     keyManager = (KeyManagerImpl)omTestManagers.getKeyManager();
     prefixManager = omTestManagers.getPrefixManager();
     writeClient = omTestManagers.getWriteClient();
+    rpcClient = omTestManagers.getRpcClient();
 
     mockContainerClient();
 
@@ -230,6 +233,8 @@ public class TestKeyManagerImpl {
 
   @AfterAll
   public static void cleanup() throws Exception {
+    writeClient.close();
+    rpcClient.close();
     scm.stop();
     scm.join();
     om.stop();

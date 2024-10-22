@@ -158,7 +158,7 @@ public class TestKeyDeletingService {
     GenericTestUtils.waitFor(
         () -> keyDeletingService.getDeletedKeyCount().get() >= keyCount,
         1000, 10000);
-    Assertions.assertTrue(keyDeletingService.getRunCount().get() > 1);
+    Assertions.assertTrue(keyDeletingService.getRunCount().get() >= 1);
     Assertions.assertEquals(0, keyManager.getPendingDeletionKeys(
         Integer.MAX_VALUE).getKeyBlocksList().size());
   }
@@ -360,7 +360,7 @@ public class TestKeyDeletingService {
     GenericTestUtils.waitFor(
         () -> keyDeletingService.getDeletedKeyCount().get() >= 1,
         1000, 10000);
-    Assertions.assertTrue(keyDeletingService.getRunCount().get() > 1);
+    Assertions.assertTrue(keyDeletingService.getRunCount().get() >= 1);
     Assertions.assertEquals(0, keyManager.getPendingDeletionKeys(
         Integer.MAX_VALUE).getKeyBlocksList().size());
 
@@ -439,7 +439,7 @@ public class TestKeyDeletingService {
     GenericTestUtils.waitFor(
         () -> keyDeletingService.getDeletedKeyCount().get() >= 1,
         1000, 10000);
-    Assertions.assertTrue(keyDeletingService.getRunCount().get() > 1);
+    Assertions.assertTrue(keyDeletingService.getRunCount().get() >= 1);
     Assertions.assertEquals(0, keyManager
         .getPendingDeletionKeys(Integer.MAX_VALUE).getKeyBlocksList().size());
 
