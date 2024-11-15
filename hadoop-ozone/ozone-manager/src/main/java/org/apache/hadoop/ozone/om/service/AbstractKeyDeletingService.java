@@ -75,7 +75,7 @@ public abstract class AbstractKeyDeletingService extends BackgroundService
 
   private final OzoneManager ozoneManager;
   private final ScmBlockLocationProtocol scmClient;
-  private static ClientId clientId = ClientId.randomId();
+  private final ClientId clientId = ClientId.randomId();
   private final AtomicLong deletedDirsCount;
   private final AtomicLong movedDirsCount;
   private final AtomicLong movedFilesCount;
@@ -252,7 +252,7 @@ public abstract class AbstractKeyDeletingService extends BackgroundService
       ozoneManager.getOmRatisServer().submitRequest(omRequest,
           raftClientRequest);
     } catch (ServiceException e) {
-      LOG.error("PurgeKey request failed. Will retry at next run.");
+      LOG.error("PurgeKey request failed. Will retry at next run.", e);
       return 0;
     }
 
@@ -321,7 +321,7 @@ public abstract class AbstractKeyDeletingService extends BackgroundService
             .submitRequest(null, omRequest);
       }
     } catch (ServiceException e) {
-      LOG.error("PurgePaths request failed. Will retry at next run.");
+      LOG.error("PurgePaths request failed. Will retry at next run.", e);
     }
   }
 
@@ -435,6 +435,8 @@ public abstract class AbstractKeyDeletingService extends BackgroundService
         }
         consumedSize += request.getSerializedSize();
         purgePathRequestList.add(request);
+        // reduce remain count for self, sub-files, and sub-directories
+        remainNum = remainNum - 1;
         remainNum = remainNum - request.getDeletedSubFilesCount();
         remainNum = remainNum - request.getMarkDeletedSubDirsCount();
         // Count up the purgeDeletedDir, subDirs and subFiles
