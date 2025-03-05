@@ -18,7 +18,7 @@
 package org.apache.hadoop.ozone.om.request.s3.security;
 
 import com.google.common.base.Optional;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ozone.om.OMMultiTenantManager;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
@@ -51,7 +51,7 @@ public final class S3SecretRequestHelper {
    * @return {@link UserGroupInformation} instance.
    */
   public static UserGroupInformation getOrCreateUgi(String accessId) {
-    final UserGroupInformation ugi = ProtobufRpcEngine.Server.getRemoteUser();
+    final UserGroupInformation ugi = ProtobufRpcEngine2.Server.getRemoteUser();
     if (ugi == null && Strings.isNotEmpty(accessId)) {
       return UserGroupInformation.createRemoteUser(accessId, KERBEROS);
     } else {

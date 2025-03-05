@@ -35,7 +35,7 @@ import org.apache.hadoop.hdds.utils.LegacyHadoopConfigurationSource;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.net.NetUtils;
@@ -147,7 +147,7 @@ public class SCMConnectionManager
       RPC.setProtocolEngine(
           hadoopConfig,
           StorageContainerDatanodeProtocolPB.class,
-          ProtobufRpcEngine.class);
+          ProtobufRpcEngine2.class);
       long version =
           RPC.getProtocolVersion(StorageContainerDatanodeProtocolPB.class);
 
@@ -194,7 +194,7 @@ public class SCMConnectionManager
       Configuration hadoopConfig =
           LegacyHadoopConfigurationSource.asHadoopConfiguration(this.conf);
       RPC.setProtocolEngine(hadoopConfig, ReconDatanodeProtocolPB.class,
-          ProtobufRpcEngine.class);
+          ProtobufRpcEngine2.class);
       long version =
           RPC.getProtocolVersion(ReconDatanodeProtocolPB.class);
 

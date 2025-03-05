@@ -50,7 +50,7 @@ import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
 import org.apache.hadoop.hdds.scm.protocolPB.ScmBlockLocationProtocolPB;
 import org.apache.hadoop.hdds.utils.HddsServerUtil;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ozone.audit.AuditAction;
@@ -111,7 +111,7 @@ public class SCMBlockProtocolServer implements
             OZONE_SCM_HANDLER_COUNT_DEFAULT);
 
     RPC.setProtocolEngine(conf, ScmBlockLocationProtocolPB.class,
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
 
     protocolMessageMetrics =
         ProtocolMessageMetrics.create(

@@ -39,7 +39,7 @@ import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.OMMetrics;
@@ -87,7 +87,7 @@ public class TestOMClientRequestWithUserInfo {
 
   @Test
   public void testUserInfoInCaseOfHadoopTransport() throws Exception {
-    new MockUp<ProtobufRpcEngine.Server>() {
+    new MockUp<ProtobufRpcEngine2.Server>() {
       @Mock
       public UserGroupInformation getRemoteUser() {
         return userGroupInformation;

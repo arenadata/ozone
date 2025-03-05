@@ -16,7 +16,7 @@
  */
 package org.apache.hadoop.ozone.security.acl;
 
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType;
@@ -165,8 +165,8 @@ public class RequestContext {
   public static RequestContext.Builder getBuilder(UserGroupInformation ugi,
       ACLType aclType, String ownerName) {
     return getBuilder(ugi,
-        ProtobufRpcEngine.Server.getRemoteIp(),
-        ProtobufRpcEngine.Server.getRemoteIp().getHostName(),
+        ProtobufRpcEngine2.Server.getRemoteIp(),
+        ProtobufRpcEngine2.Server.getRemoteIp().getHostName(),
         aclType, ownerName);
   }
 

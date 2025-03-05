@@ -21,7 +21,7 @@ package org.apache.hadoop.ozone.om.request;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.audit.AuditAction;
@@ -147,8 +147,8 @@ public abstract class OMClientRequest implements RequestAuditor {
    * @return User Info.
    */
   public OzoneManagerProtocolProtos.UserInfo getUserInfo() throws IOException {
-    UserGroupInformation user = ProtobufRpcEngine.Server.getRemoteUser();
-    InetAddress remoteAddress = ProtobufRpcEngine.Server.getRemoteIp();
+    UserGroupInformation user = ProtobufRpcEngine2.Server.getRemoteUser();
+    InetAddress remoteAddress = ProtobufRpcEngine2.Server.getRemoteIp();
     OzoneManagerProtocolProtos.UserInfo.Builder userInfo =
         OzoneManagerProtocolProtos.UserInfo.newBuilder();
 

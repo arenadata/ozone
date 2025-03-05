@@ -106,9 +106,9 @@ HelloWorldServicePB proxy = RPC.getProtocolProxy(
 
 This code fragment creates a new client which can be used from the code, and it uses multiple caches for client creation.
 
-1. Protocol engines are cached by `RPC.PROTOCOL_ENGINES` static field, but it's safe to assume that the `ProtobufRpcEngine` is used for most of the current applications.
+1. Protocol engines are cached by `RPC.PROTOCOL_ENGINES` static field, but it's safe to assume that the `ProtobufRpcEngine2` is used for most of the current applications.
 
-2. `ProtobufRpcEngine` has a static `ClientCache` field which caches the client instances with the `socketFactory` and `protocol` as the key.
+2. `ProtobufRpcEngine2` has a static `ClientCache` field which caches the client instances with the `socketFactory` and `protocol` as the key.
 
 3. Finally the `Client.getConnection` method uses a cache to cache the connections:
 

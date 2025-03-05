@@ -287,7 +287,7 @@ public final class TestDelegationToken {
     // Setup secure OM for start
     setupOm(conf);
 
-    //These are two very important lines: ProtobufRpcEngine uses ClientCache
+    //These are two very important lines: ProtobufRpcEngine2 uses ClientCache
     //which caches clients until no more references. Cache key is the
     //SocketFactory which means that we use one Client instance for
     //all the Hadoop RPC.

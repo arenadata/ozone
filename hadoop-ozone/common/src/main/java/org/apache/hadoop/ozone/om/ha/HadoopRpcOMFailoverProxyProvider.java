@@ -35,7 +35,7 @@ import org.apache.hadoop.hdds.utils.LegacyHadoopConfigurationSource;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.OmUtils;
@@ -133,7 +133,7 @@ public class HadoopRpcOMFailoverProxyProvider<T> extends
   private T createOMProxy(InetSocketAddress omAddress) throws IOException {
     Configuration hadoopConf =
         LegacyHadoopConfigurationSource.asHadoopConfiguration(getConf());
-    RPC.setProtocolEngine(hadoopConf, getInterface(), ProtobufRpcEngine.class);
+    RPC.setProtocolEngine(hadoopConf, getInterface(), ProtobufRpcEngine2.class);
 
     // FailoverOnNetworkException ensures that the IPC layer does not attempt
     // retries on the same OM in case of connection exception. This retry

@@ -125,7 +125,7 @@ import org.apache.hadoop.hdds.utils.db.SequenceNumberNotFoundException;
 import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
 import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.metrics2.util.MBeans;
@@ -624,7 +624,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     }
 
     RPC.setProtocolEngine(configuration, OzoneManagerProtocolPB.class,
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
 
     secConfig = new SecurityConfig(configuration);
     // Create the KMS Key Provider
@@ -1225,7 +1225,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     final int handlerCount = conf.getInt(OZONE_OM_HANDLER_COUNT_KEY,
         OZONE_OM_HANDLER_COUNT_DEFAULT);
     RPC.setProtocolEngine(configuration, OzoneManagerProtocolPB.class,
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
 
     this.omServerProtocol = new OzoneManagerProtocolServerSideTranslatorPB(
         this, omRatisServer, omClientProtocolMetrics, isRatisEnabled,
@@ -2446,8 +2446,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     try {
       return checkAcls(resType, store, acl, vol, bucket, key,
           UserGroupInformation.createRemoteUser(userName),
-          ProtobufRpcEngine.Server.getRemoteIp(),
-          ProtobufRpcEngine.Server.getRemoteIp().getHostName(),
+          ProtobufRpcEngine2.Server.getRemoteIp(),
+          ProtobufRpcEngine2.Server.getRemoteIp().getHostName(),
           false, getVolumeOwner(vol, acl, resType));
     } catch (OMException ex) {
       // Should not trigger exception here at all
@@ -2644,7 +2644,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   public List<OmVolumeArgs> listVolumeByUser(String userName, String prefix,
       String prevKey, int maxKeys) throws IOException {
     UserGroupInformation remoteUserUgi =
-        ProtobufRpcEngine.Server.getRemoteUser();
+        ProtobufRpcEngine2.Server.getRemoteUser();
     if (isAclEnabled) {
       if (remoteUserUgi == null) {
         LOG.error("Rpc user UGI is null. Authorization failed.");
@@ -3452,7 +3452,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
         metadataManager.getLock().acquireReadLock(VOLUME_LOCK, volumeName);
     boolean lockAcquired = omLockDetails.isLockAcquired();
     try {
-      final UserGroupInformation ugi = ProtobufRpcEngine.Server.getRemoteUser();
+      final UserGroupInformation ugi = ProtobufRpcEngine2.Server.getRemoteUser();
       if (!multiTenantManager.isTenantAdmin(ugi, tenantId, false)) {
         throw new OMException("Only tenant and ozone admins can access this " +
             "API. '" + ugi.getShortUserName() + "' is not an admin.",

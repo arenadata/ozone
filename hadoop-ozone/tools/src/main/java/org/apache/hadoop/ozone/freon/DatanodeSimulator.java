@@ -46,7 +46,7 @@ import org.apache.hadoop.hdds.utils.HddsServerUtil;
 import org.apache.hadoop.hdds.utils.LegacyHadoopConfigurationSource;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.common.Storage;
@@ -529,7 +529,7 @@ public class DatanodeSimulator implements Callable<Void> {
     RPC.setProtocolEngine(
         hadoopConfig,
         StorageContainerDatanodeProtocolPB.class,
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
     long version =
         RPC.getProtocolVersion(StorageContainerDatanodeProtocolPB.class);
 
@@ -554,7 +554,7 @@ public class DatanodeSimulator implements Callable<Void> {
     Configuration hadoopConfig =
         LegacyHadoopConfigurationSource.asHadoopConfiguration(this.conf);
     RPC.setProtocolEngine(hadoopConfig, ReconDatanodeProtocolPB.class,
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
     long version =
         RPC.getProtocolVersion(ReconDatanodeProtocolPB.class);
 

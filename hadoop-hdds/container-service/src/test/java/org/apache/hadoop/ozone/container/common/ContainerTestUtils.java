@@ -31,7 +31,7 @@ import org.apache.hadoop.hdds.utils.LegacyHadoopConfigurationSource;
 import org.apache.hadoop.hdfs.util.Canceler;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.io.retry.RetryPolicies;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
@@ -111,7 +111,7 @@ public final class ContainerTestUtils {
   public static EndpointStateMachine createEndpoint(Configuration conf,
       InetSocketAddress address, int rpcTimeout) throws Exception {
     RPC.setProtocolEngine(conf, StorageContainerDatanodeProtocolPB.class,
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
     long version =
         RPC.getProtocolVersion(StorageContainerDatanodeProtocolPB.class);
 

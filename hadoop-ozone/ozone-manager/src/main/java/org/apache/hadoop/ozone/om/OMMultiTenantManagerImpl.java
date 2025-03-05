@@ -51,7 +51,7 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.utils.db.Table;
 import org.apache.hadoop.hdds.utils.db.Table.KeyValue;
 import org.apache.hadoop.hdds.utils.db.TableIterator;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmDBAccessIdInfo;
 import org.apache.hadoop.ozone.om.helpers.OmDBTenantState;
@@ -936,7 +936,7 @@ public class OMMultiTenantManagerImpl implements OMMultiTenantManager {
   @Override
   public void checkAdmin() throws OMException {
 
-    final UserGroupInformation ugi = ProtobufRpcEngine.Server.getRemoteUser();
+    final UserGroupInformation ugi = ProtobufRpcEngine2.Server.getRemoteUser();
     if (!ozoneManager.isAdmin(ugi)) {
       throw new OMException("User '" + ugi.getShortUserName() +
           "' is not an Ozone admin", OMException.ResultCodes.PERMISSION_DENIED);
@@ -947,7 +947,7 @@ public class OMMultiTenantManagerImpl implements OMMultiTenantManager {
   public void checkTenantAdmin(String tenantId, boolean delegated)
       throws OMException {
 
-    final UserGroupInformation ugi = ProtobufRpcEngine.Server.getRemoteUser();
+    final UserGroupInformation ugi = ProtobufRpcEngine2.Server.getRemoteUser();
     if (!isTenantAdmin(ugi, tenantId, delegated)) {
       throw new OMException("User '" + ugi.getUserName() +
           "' is neither an Ozone admin nor a delegated admin of tenant '" +

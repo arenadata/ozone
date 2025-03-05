@@ -29,7 +29,7 @@ import org.apache.hadoop.hdds.utils.LegacyHadoopConfigurationSource;
 import org.apache.hadoop.io.retry.FailoverProxyProvider;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -170,7 +170,7 @@ public class SecretKeyProtocolFailoverProxyProvider
     Configuration hadoopConf =
         LegacyHadoopConfigurationSource.asHadoopConfiguration(conf);
     RPC.setProtocolEngine(hadoopConf, proxyClazz,
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
 
     // FailoverOnNetworkException ensures that the IPC layer does not attempt
     // retries on the same SCM in case of connection exception. This retry

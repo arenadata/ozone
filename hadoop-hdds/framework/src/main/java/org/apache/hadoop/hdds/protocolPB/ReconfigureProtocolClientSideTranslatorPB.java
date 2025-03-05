@@ -37,7 +37,7 @@ import org.apache.hadoop.hdds.protocol.proto.ReconfigureProtocolProtos.ListRecon
 import org.apache.hadoop.hdds.protocol.proto.ReconfigureProtocolProtos.StartReconfigureRequestProto;
 import org.apache.hadoop.hdds.utils.LegacyHadoopConfigurationSource;
 import org.apache.hadoop.ipc.ProtobufHelper;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.ProtocolMetaInterface;
 import org.apache.hadoop.ipc.ProtocolTranslator;
 import org.apache.hadoop.ipc.RPC;
@@ -93,7 +93,7 @@ public class ReconfigureProtocolClientSideTranslatorPB implements
       OzoneConfiguration conf) throws IOException {
 
     RPC.setProtocolEngine(OzoneConfiguration.of(conf),
-        ReconfigureProtocolPB.class, ProtobufRpcEngine.class);
+        ReconfigureProtocolPB.class, ProtobufRpcEngine2.class);
     Configuration hadoopConf = LegacyHadoopConfigurationSource
         .asHadoopConfiguration(conf);
     return RPC.getProtocolProxy(

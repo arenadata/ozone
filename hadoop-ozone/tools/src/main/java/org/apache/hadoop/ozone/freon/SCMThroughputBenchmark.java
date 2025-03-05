@@ -46,7 +46,7 @@ import org.apache.hadoop.hdds.utils.HAUtils;
 import org.apache.hadoop.hdds.utils.LegacyHadoopConfigurationSource;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -316,7 +316,7 @@ public final class SCMThroughputBenchmark implements Callable<Void> {
     RPC.setProtocolEngine(
         hadoopConfig,
         StorageContainerDatanodeProtocolPB.class,
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
     long version =
         RPC.getProtocolVersion(StorageContainerDatanodeProtocolPB.class);
 

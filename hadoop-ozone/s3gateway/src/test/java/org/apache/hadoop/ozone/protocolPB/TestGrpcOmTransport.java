@@ -19,7 +19,7 @@
 package org.apache.hadoop.ozone.protocolPB;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ozone.om.protocolPB.GrpcOmTransportFactory;
 import org.apache.hadoop.ozone.om.protocolPB.GrpcOmTransport;
@@ -53,7 +53,7 @@ public class TestGrpcOmTransport {
     conf = new OzoneConfiguration();
     RPC.setProtocolEngine(OzoneConfiguration.of(conf),
         OzoneManagerProtocolPB.class,
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
   }
 
   @Test

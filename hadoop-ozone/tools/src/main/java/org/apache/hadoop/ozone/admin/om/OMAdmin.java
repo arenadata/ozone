@@ -22,7 +22,7 @@ import org.apache.hadoop.hdds.cli.HddsVersionProvider;
 import org.apache.hadoop.hdds.cli.OzoneAdmin;
 import org.apache.hadoop.hdds.cli.SubcommandWithParent;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.client.OzoneClientException;
@@ -114,7 +114,7 @@ public class OMAdmin extends GenericCli implements SubcommandWithParent {
       omServiceID = getTheOnlyConfiguredOmServiceIdOrThrow();
     }
     RPC.setProtocolEngine(conf, OzoneManagerProtocolPB.class,
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
     String clientId = ClientId.randomId().toString();
     if (!forceHA || (forceHA && OmUtils.isOmHAServiceId(conf, omServiceID))) {
       OmTransport omTransport = new Hadoop3OmTransportFactory()

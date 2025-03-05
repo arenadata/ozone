@@ -29,7 +29,7 @@ import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.ipc.ProtobufHelper;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.OmUtils;
@@ -81,7 +81,7 @@ public final class OMAdminProtocolClientSideImpl implements OMAdminProtocol {
       OMNodeDetails omNodeDetails) throws IOException {
 
     RPC.setProtocolEngine(OzoneConfiguration.of(conf),
-        OMAdminProtocolPB.class, ProtobufRpcEngine.class);
+        OMAdminProtocolPB.class, ProtobufRpcEngine2.class);
 
     int maxRetries = conf.getInt(
         OMConfigKeys.OZONE_OM_ADMIN_PROTOCOL_MAX_RETRIES_KEY,
@@ -126,7 +126,7 @@ public final class OMAdminProtocolClientSideImpl implements OMAdminProtocol {
       throws IOException {
 
     RPC.setProtocolEngine(OzoneConfiguration.of(conf),
-        OMAdminProtocolPB.class, ProtobufRpcEngine.class);
+        OMAdminProtocolPB.class, ProtobufRpcEngine2.class);
 
     HadoopRpcOMFailoverProxyProvider omFailoverProxyProvider =
         new HadoopRpcOMFailoverProxyProvider(conf, ugi, omServiceId,

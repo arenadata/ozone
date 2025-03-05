@@ -30,7 +30,7 @@ import org.apache.hadoop.hdds.protocolPB.ReconfigureProtocolServerSideTranslator
 import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.hdds.server.ServiceRuntimeInfoImpl;
 import org.apache.hadoop.hdds.utils.VersionInfo;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -97,7 +97,7 @@ public class HddsDatanodeClientProtocolServer extends ServiceRuntimeInfoImpl {
     InetSocketAddress rpcAddress = HddsUtils.getDatanodeRpcAddress(conf);
     // Add reconfigureProtocolService.
     RPC.setProtocolEngine(
-        configuration, ReconfigureProtocolPB.class, ProtobufRpcEngine.class);
+        configuration, ReconfigureProtocolPB.class, ProtobufRpcEngine2.class);
 
     final int handlerCount = conf.getInt(HDDS_DATANODE_HANDLER_COUNT_KEY,
         HDDS_DATANODE_HANDLER_COUNT_DEFAULT);
