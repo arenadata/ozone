@@ -34,7 +34,7 @@ import java.util.List;
 public class MultipartInputStream extends ExtendedInputStream {
 
   private final String key;
-  private final long length;
+  private long length;
 
   // List of PartInputStream, one for each part of the key
   private final List<? extends PartInputStream> partStreams;
@@ -55,6 +55,8 @@ public class MultipartInputStream extends ExtendedInputStream {
   // Tracks the partIndex corresponding to the last seeked position so that it
   // can be reset if a new position is seeked.
   private int prevPartIndex;
+
+  private boolean initialized = false;
 
   public MultipartInputStream(String keyName,
                               List<? extends PartInputStream> inputStreams) {
@@ -130,6 +132,9 @@ public class MultipartInputStream extends ExtendedInputStream {
   @Override
   public synchronized void seek(long pos) throws IOException {
     checkOpen();
+    if (!initialized) {
+      initialize();
+    }
     if (pos == 0 && length == 0) {
       // It is possible for length and pos to be zero in which case
       // seek should return instead of throwing exception
@@ -173,6 +178,26 @@ public class MultipartInputStream extends ExtendedInputStream {
     prevPartIndex = partIndex;
   }
 
+  public synchronized void initialize() throws IOException {
+    // Pre-check that the stream has not been intialized already
+    if (initialized) {
+      return;
+    }
+
+    for (PartInputStream partInputStream : partStreams) {
+      if (partInputStream instanceof BlockInputStream) {
+        ((BlockInputStream) partInputStream).initialize();
+      }
+    }
+
+    long streamLength = 0L;
+    for (PartInputStream partInputStream : partStreams) {
+      streamLength += partInputStream.getLength();
+    }
+    this.length = streamLength;
+    initialized = true;
+  }
+
   @Override
   public synchronized long getPos() throws IOException {
     return length == 0 ? 0 :
@@ -195,6 +220,11 @@ public class MultipartInputStream extends ExtendedInputStream {
 
   @Override
   public synchronized long skip(long n) throws IOException {
+    checkOpen();
+    if (!initialized) {
+      initialize();
+    }
+
     if (n <= 0) {
       return 0;
     }
