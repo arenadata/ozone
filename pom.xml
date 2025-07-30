@@ -183,7 +183,7 @@
     <opentracing.version>0.33.0</opentracing.version>
     <os-maven-plugin.version>1.7.1</os-maven-plugin.version>
     <ozone.release>Indiana Dunes</ozone.release>
-    <ozone.version>2.0.0</ozone.version>
+    <ozone.version>2.0.0_arenadata1</ozone.version>
     <picocli.version>4.7.5</picocli.version>
     <plexus-archiver.version>4.2.2</plexus-archiver.version>
     <pmd.version>3.26.0</pmd.version>
