@@ -24,7 +24,7 @@ import { InfoCircleOutlined, LeftOutlined, LoadingOutlined, RedoOutlined } from 
 
 import { DetailPanel } from '@/components/rightDrawer/rightDrawer';
 import { EChart } from '@/components/eChart/eChart';
-import { byteToSize, showDataFetchError } from '@/utils/common';
+import {byteToSize, escapeHtml, showDataFetchError} from '@/utils/common';
 import { AxiosGetHelper, cancelRequests } from '@/utils/axiosRequestHelper';
 
 import './diskUsage.less';
@@ -564,7 +564,7 @@ export class DiskUsage extends React.Component<Record<string, object>, IDUState>
       tooltip: {
         trigger: 'item',
         formatter: ({ dataIndex, name, color }) => {
-          const nameEl = `<strong style='color: ${color}'>${name}</strong><br>`;
+          const nameEl = `<strong style='color: ${color}'>${escapeHtml(String(name))}</strong><br>`;
           const dataEl = `Total Data Size: ${plotData[dataIndex]['size']}<br>`
           const percentageEl = `Percentage: ${plotData[dataIndex]['percentage']} %`
           return `${nameEl}${dataEl}${percentageEl}`
@@ -578,7 +578,8 @@ export class DiskUsage extends React.Component<Record<string, object>, IDUState>
       series: [
         {
           type: 'pie',
-          radius: '50%',
+          radius: '60%',
+          center: ['50%', '50%'],
           data: plotData.map((value) => {
             return {
               value: value.value,
@@ -664,7 +665,7 @@ export class DiskUsage extends React.Component<Record<string, object>, IDUState>
                 {(duResponse.size > 0) ?
                   <div style={{
                     height: 700,
-                    margin: 'auto',
+                    width: '100%',
                     marginTop: '5%'
                   }}>
                     <EChart
