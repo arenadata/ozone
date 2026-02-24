@@ -183,7 +183,7 @@ const DUPieChart: React.FC<PieChartProps> = ({
       {
         type: 'pie',
         radius: '70%',
-        center: ['50%', '50%'],
+        center: ['58%', '45%'],
         data: pieData.map((value) => {
           return {
             value: value.value,
