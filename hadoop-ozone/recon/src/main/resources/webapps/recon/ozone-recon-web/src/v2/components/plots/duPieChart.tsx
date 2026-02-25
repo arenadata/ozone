@@ -19,7 +19,7 @@
 import React from 'react';
 
 import EChart from '@/v2/components/eChart/eChart';
-import { byteToSize, escapeHtml } from '@/utils/common';
+import { byteToSize } from '@/utils/common';
 import { DUSubpath } from '@/v2/types/diskUsage.types';
 
 //-------Types--------//
@@ -151,7 +151,7 @@ const DUPieChart: React.FC<PieChartProps> = ({
     tooltip: {
       trigger: 'item',
       formatter: ({ dataIndex, name, color }) => {
-        const nameEl = `<strong style='color: ${color}'>${escapeHtml(String(name))}</strong><br>`;
+        const nameEl = `<strong style='color: ${color}'>${name}</strong><br>`;
         const dataEl = `Total Data Size: ${pieData[dataIndex]['size']}<br>`
         const percentageEl = `Percentage: ${pieData[dataIndex]['percentage']} %`
         return `${nameEl}${dataEl}${percentageEl}`
@@ -167,7 +167,7 @@ const DUPieChart: React.FC<PieChartProps> = ({
       tooltip: {
         show: true,
         formatter: ({ name }) => {
-          const nameEl = `<strong'>${escapeHtml(String(name))}</strong><br>`;
+          const nameEl = `<strong'>${name}</strong><br>`;
           return `${nameEl}`
         },
       },

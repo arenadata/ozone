@@ -119,6 +119,3 @@ export const checkResponseError = (responses: Awaited<Promise<any>>[]) => {
     })
   }
 }
-
-export const escapeHtml = (s: string) =>
-    s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
