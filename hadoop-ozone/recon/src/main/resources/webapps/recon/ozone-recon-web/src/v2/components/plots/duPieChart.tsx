@@ -144,9 +144,10 @@ const DUPieChart: React.FC<PieChartProps> = ({
 
   const eChartsOptions = {
     title: {
-      text: `${byteToSize(subpathSize, 1)} /  ${byteToSize(size, 1)}`,
-      left: 'center',
-      top: '95%'
+      text: `${byteToSize(subpathSize, 1)} / ${byteToSize(size, 1)}`,
+      textAlign: 'center',
+      top: '95%',
+      left: '58%',
     },
     tooltip: {
       trigger: 'item',

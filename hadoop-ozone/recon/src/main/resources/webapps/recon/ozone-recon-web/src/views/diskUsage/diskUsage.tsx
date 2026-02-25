@@ -572,7 +572,8 @@ export class DiskUsage extends React.Component<Record<string, object>, IDUState>
     const eChartsOptions = {
       title: {
         text: `Disk Usage for ${returnPath} (Total Size: ${byteToSize(duResponse.size, 1)})`,
-        left: 'center'
+        left: '50%',
+        textAlign: 'center',
       },
       tooltip: {
         trigger: 'item',
