@@ -178,6 +178,7 @@ const DUPieChart: React.FC<PieChartProps> = ({
       },
     },
     grid: {
+
     },
     series: [
       {
