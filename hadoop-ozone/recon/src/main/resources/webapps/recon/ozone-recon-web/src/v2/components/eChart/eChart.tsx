@@ -19,7 +19,7 @@
 import React, { useRef, useEffect } from "react";
 import { init, getInstanceByDom } from 'echarts';
 import type { CSSProperties } from "react";
-import type { EChartsOption, ECharts, SetOptionOpts } from 'echarts';
+import type { EChartsOption, ECharts, SetOptionOpts, ECElementEvent } from 'echarts';
 
 export interface EChartProps {
   option: EChartsOption;
@@ -27,7 +27,7 @@ export interface EChartProps {
   settings?: SetOptionOpts;
   loading?: boolean;
   theme?: 'light';
-  onClick?: () => any | void;
+  onClick?: (event: ECElementEvent) => void;
   eventHandler?: {
     name: string,
     handler: (arg0: any) => void

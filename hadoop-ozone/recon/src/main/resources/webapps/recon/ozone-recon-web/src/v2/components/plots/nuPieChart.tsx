@@ -31,6 +31,7 @@ type PieChartProps = {
   subPathCount: number;
   sizeWithReplica: number;
   loading: boolean;
+  onClick?: (path: string) => void;
 }
 
 //-------Constants---------//
@@ -46,7 +47,8 @@ const NUPieChart: React.FC<PieChartProps> = ({
   subPaths,
   subPathCount,
   sizeWithReplica,
-  loading
+  loading,
+  onClick
 }) => {
   const [subpathSize, setSubpathSize]  = React.useState<number>(0);
 
@@ -185,6 +187,19 @@ const NUPieChart: React.FC<PieChartProps> = ({
     ]
   };
 
+  const handlePieClick = React.useCallback(
+    (e: { name: string }) => {
+      if (!onClick || subPathCount === 0) return;
+
+      const subPath = e.name;
+      if (subPath === OTHER_PATH_NAME) return;
+
+      const fullPath = path === '/' ? `/${subPath}` : `${path}/${subPath}`;
+      onClick(fullPath);
+    },
+    [path, subPathCount, onClick]
+  );
+
   const handleLegendChange = ({selected}: {selected: Record<string, boolean>}) => {
     const filteredPath = subPaths.filter((value) => {
       // In case of any leading '/' remove them and add a / at end
@@ -202,6 +217,7 @@ const NUPieChart: React.FC<PieChartProps> = ({
       loading={loading}
       option={eChartsOptions}
       style={{ flex: '1 3 80%', height: '50vh' }}
+      onClick={handlePieClick}
       eventHandler={{name: 'legendselectchanged', handler: handleLegendChange}}/>
   );
 }

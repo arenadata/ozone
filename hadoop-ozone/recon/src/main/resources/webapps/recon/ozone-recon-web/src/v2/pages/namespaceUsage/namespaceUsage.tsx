@@ -140,7 +140,8 @@ const NamespaceUsage: React.FC<{}> = () => {
               subPathCount={duResponse.subPathCount}
               subPaths={duResponse.subPaths}
               sizeWithReplica={duResponse.sizeWithReplica}
-              size={duResponse.size} />
+              size={duResponse.size}
+              onClick={loadData} />
             <NUMetadata path={currentPath} />
           </div>
         </div>
