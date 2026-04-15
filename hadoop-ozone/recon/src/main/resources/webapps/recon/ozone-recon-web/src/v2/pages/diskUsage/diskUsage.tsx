@@ -145,7 +145,8 @@ const DiskUsage: React.FC<{}> = () => {
               subPathCount={duResponse.subPathCount}
               subPaths={duResponse.subPaths}
               sizeWithReplica={duResponse.sizeWithReplica}
-              size={duResponse.size} />
+              size={duResponse.size}
+              onClick={loadData} />
             <DUMetadata path={duResponse.path} />
           </div>
         </div>
