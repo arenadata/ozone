@@ -146,9 +146,10 @@ const DUPieChart: React.FC<PieChartProps> = ({
 
   const eChartsOptions = {
     title: {
-      text: `${byteToSize(subpathSize, 1)} /  ${byteToSize(size, 1)}`,
-      left: 'center',
-      top: '95%'
+      text: `${byteToSize(subpathSize, 1)} / ${byteToSize(size, 1)}`,
+      textAlign: 'center',
+      top: '95%',
+      left: '58%',
     },
     tooltip: {
       trigger: 'item',
@@ -160,10 +161,24 @@ const DUPieChart: React.FC<PieChartProps> = ({
       }
     },
     legend: {
-      top: '10%',
+      type: 'scroll',
       orient: 'vertical',
-      left: '0%',
-      width: '80%'
+      height: '99%',
+      width: 150,
+      left: 0,
+      top: 0,
+      tooltip: {
+        show: true,
+        formatter: ({ name }) => {
+          const nameEl = `<strong'>${name}</strong><br>`;
+          return `${nameEl}`
+        },
+      },
+      textStyle: {
+        width: 145,
+        overflow: 'truncate',
+        ellipsis: '…',
+      },
     },
     grid: {
 
@@ -172,6 +187,7 @@ const DUPieChart: React.FC<PieChartProps> = ({
       {
         type: 'pie',
         radius: '70%',
+        center: ['58%', '45%'],
         data: pieData.map((value) => {
           return {
             value: value.value,
@@ -184,6 +200,14 @@ const DUPieChart: React.FC<PieChartProps> = ({
             shadowOffsetX: 0,
             shadowColor: 'rgba(0, 0, 0, 0.5)'
           }
+        },
+        label: {
+          show: true,
+          overflow: 'truncate',
+          width: 100
+        },
+        labelLayout: {
+          hideOverlap: true
         }
       }
     ]

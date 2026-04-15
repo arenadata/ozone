@@ -28,7 +28,6 @@ import {
 } from 'antd';
 import { MenuProps } from 'antd/es/menu';
 import {
-  CloseOutlined,
   InfoCircleOutlined,
   LeftOutlined,
   LoadingOutlined,
@@ -573,7 +572,8 @@ export class DiskUsage extends React.Component<Record<string, object>, IDUState>
     const eChartsOptions = {
       title: {
         text: `Disk Usage for ${returnPath} (Total Size: ${byteToSize(duResponse.size, 1)})`,
-        left: 'center'
+        left: '50%',
+        textAlign: 'center',
       },
       tooltip: {
         trigger: 'item',
@@ -592,7 +592,8 @@ export class DiskUsage extends React.Component<Record<string, object>, IDUState>
       series: [
         {
           type: 'pie',
-          radius: '50%',
+          radius: '55%',
+          center: ['50%', '50%'],
           data: plotData.map((value) => {
             return {
               value: value.value,
@@ -605,6 +606,14 @@ export class DiskUsage extends React.Component<Record<string, object>, IDUState>
               shadowOffsetX: 0,
               shadowColor: 'rgba(0, 0, 0, 0.5)'
             }
+          },
+          label: {
+            show: true,
+            overflow: 'truncate',
+            width: 120
+          },
+          labelLayout: {
+            hideOverlap: true
           }
         }
       ]
@@ -670,7 +679,7 @@ export class DiskUsage extends React.Component<Record<string, object>, IDUState>
                 {(duResponse.size > 0) ?
                   <div style={{
                     height: 700,
-                    margin: 'auto',
+                    width: '100%',
                     marginTop: '5%'
                   }}>
                     <EChart
