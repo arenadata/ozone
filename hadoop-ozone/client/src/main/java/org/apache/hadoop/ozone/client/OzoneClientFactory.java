@@ -39,6 +39,7 @@ import org.apache.hadoop.ozone.client.rpc.RpcClient;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
 import org.apache.hadoop.security.token.Token;
 import org.apache.ratis.util.UncheckedAutoCloseable;
+import org.apache.ratis.util.function.CheckedBiFunction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -119,10 +120,16 @@ public final class OzoneClientFactory {
    */
   public static OzoneClient getRpcClient(String omServiceId,
       ConfigurationSource config) throws IOException {
+    return getRpcClient(omServiceId, config, OzoneClientFactory::getClientProtocol);
+  }
+
+  static OzoneClient getRpcClient(String omServiceId,
+                                  ConfigurationSource config,
+                                  CheckedBiFunction<ConfigurationSource, String, ClientProtocol, IOException> clientProtocolProvider) throws IOException {
     Preconditions.checkNotNull(omServiceId);
     Preconditions.checkNotNull(config);
     if (OmUtils.isOmHAServiceId(config, omServiceId)) {
-      return getRpcClient(getClientProtocol(config, omServiceId), config);
+      return getRpcClient(clientProtocolProvider.apply(config, omServiceId), config);
     } else {
       throw new IOException("Service ID specified " +
           "does not match with " + OZONE_OM_SERVICE_IDS_KEY + " defined in " +
@@ -143,6 +150,12 @@ public final class OzoneClientFactory {
    */
   public static OzoneClient getRpcClient(ConfigurationSource config)
       throws IOException {
+    return getRpcClient(config, OzoneClientFactory::getClientProtocol);
+  }
+
+  static OzoneClient getRpcClient(ConfigurationSource config,
+                                    CheckedBiFunction<ConfigurationSource, String, ClientProtocol, IOException> clientProtocolProvider)
+      throws IOException {
     Preconditions.checkNotNull(config);
 
     // Doing this explicitly so that when service ids are defined in the
@@ -156,9 +169,9 @@ public final class OzoneClientFactory {
           " defined in the configuration. Use the method getRpcClient which " +
           "takes serviceID and configuration as param");
     } else if (serviceIds.length == 1) {
-      return getRpcClient(getClientProtocol(config, serviceIds[0]), config);
+      return getRpcClient(clientProtocolProvider.apply(config, serviceIds[0]), config);
     } else {
-      return getRpcClient(getClientProtocol(config), config);
+      return getRpcClient(clientProtocolProvider.apply(config, null), config);
     }
   }
 
