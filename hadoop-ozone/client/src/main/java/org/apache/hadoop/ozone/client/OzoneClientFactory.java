@@ -55,7 +55,8 @@ public final class OzoneClientFactory {
   /**
    * Private constructor, class is not meant to be initialized.
    */
-  private OzoneClientFactory() { }
+  private OzoneClientFactory() {
+  }
 
   public static UncheckedAutoCloseable track(AutoCloseable object) {
     final Class<?> clazz = object.getClass();
@@ -69,7 +70,6 @@ public final class OzoneClientFactory {
    * Constructs and return an OzoneClient with default configuration.
    *
    * @return OzoneClient
-   *
    * @throws IOException
    */
   public static OzoneClient getRpcClient() throws IOException {
@@ -80,21 +80,14 @@ public final class OzoneClientFactory {
   /**
    * Returns an OzoneClient which will use RPC protocol.
    *
-   * @param omHost
-   *        hostname of OzoneManager to connect.
-   *
-   * @param omRpcPort
-   *        RPC port of OzoneManager.
-   *
-   * @param config
-   *        Configuration to be used for OzoneClient creation
-   *
+   * @param omHost    hostname of OzoneManager to connect.
+   * @param omRpcPort RPC port of OzoneManager.
+   * @param config    Configuration to be used for OzoneClient creation
    * @return OzoneClient
-   *
    * @throws IOException
    */
   public static OzoneClient getRpcClient(String omHost, Integer omRpcPort,
-      MutableConfigurationSource config)
+                                         MutableConfigurationSource config)
       throws IOException {
     Preconditions.checkNotNull(omHost);
     Preconditions.checkNotNull(omRpcPort);
@@ -107,22 +100,28 @@ public final class OzoneClientFactory {
   /**
    * Returns an OzoneClient which will use RPC protocol.
    *
-   * @param omServiceId
-   *        Service ID of OzoneManager HA cluster.
-   *
-   * @param config
-   *        Configuration to be used for OzoneClient creation
-   *
+   * @param omServiceId Service ID of OzoneManager HA cluster.
+   * @param config      Configuration to be used for OzoneClient creation
    * @return OzoneClient
-   *
    * @throws IOException
    */
   public static OzoneClient getRpcClient(String omServiceId,
       ConfigurationSource config) throws IOException {
+    return getRpcClient(omServiceId, config,
+        OzoneClientFactory::getClientProtocol);
+  }
+
+  /**
+   * Returns an OzoneClient which will use RPC protocol.
+   */
+  public static OzoneClient getRpcClient(String omServiceId,
+      ConfigurationSource config, ClientProtocolProvider clientProtocolProvider)
+      throws IOException {
     Preconditions.checkNotNull(omServiceId);
     Preconditions.checkNotNull(config);
+    Preconditions.checkNotNull(clientProtocolProvider);
     if (OmUtils.isOmHAServiceId(config, omServiceId)) {
-      return getRpcClient(getClientProtocol(config, omServiceId), config);
+      return getRpcClient(clientProtocolProvider.provide(config, omServiceId), config);
     } else {
       throw new IOException("Service ID specified " +
           "does not match with " + OZONE_OM_SERVICE_IDS_KEY + " defined in " +
@@ -134,16 +133,23 @@ public final class OzoneClientFactory {
   /**
    * Returns an OzoneClient which will use RPC protocol.
    *
-   * @param config
-   *        used for OzoneClient creation
-   *
+   * @param config used for OzoneClient creation
    * @return OzoneClient
-   *
    * @throws IOException
    */
   public static OzoneClient getRpcClient(ConfigurationSource config)
       throws IOException {
+    return getRpcClient(config, OzoneClientFactory::getClientProtocol);
+  }
+
+  /**
+   * Returns an OzoneClient which will use RPC protocol.
+   */
+  public static OzoneClient getRpcClient(ConfigurationSource config,
+      ClientProtocolProvider clientProtocolProvider)
+      throws IOException {
     Preconditions.checkNotNull(config);
+    Preconditions.checkNotNull(clientProtocolProvider);
 
     // Doing this explicitly so that when service ids are defined in the
     // configuration, we don't fall back to default ozone.om.address defined
@@ -156,29 +162,27 @@ public final class OzoneClientFactory {
           " defined in the configuration. Use the method getRpcClient which " +
           "takes serviceID and configuration as param");
     } else if (serviceIds.length == 1) {
-      return getRpcClient(getClientProtocol(config, serviceIds[0]), config);
+      return getRpcClient(clientProtocolProvider.provide(config, serviceIds[0]), config);
     } else {
-      return getRpcClient(getClientProtocol(config), config);
+      return getRpcClient(clientProtocolProvider.provide(config, null), config);
     }
   }
 
   /**
    * Creates OzoneClient with the given ClientProtocol and Configuration.
    *
-   * @param clientProtocol
-   *        Protocol to be used by the OzoneClient
-   *
-   * @param config
-   *        Configuration to be used for OzoneClient creation
+   * @param clientProtocol Protocol to be used by the OzoneClient
+   * @param config         Configuration to be used for OzoneClient creation
    */
   private static OzoneClient getRpcClient(ClientProtocol clientProtocol,
-                                       ConfigurationSource config) {
+                                          ConfigurationSource config) {
     return new OzoneClient(config, clientProtocol);
   }
 
   /**
    * Create OzoneClient for token renew/cancel operations.
-   * @param conf Configuration to be used for OzoneCient creation
+   *
+   * @param conf  Configuration to be used for OzoneCient creation
    * @param token ozone token is involved
    * @return OzoneClient
    * @throws IOException
@@ -228,12 +232,8 @@ public final class OzoneClientFactory {
   /**
    * Returns an instance of Protocol class.
    *
-   *
-   * @param config
-   *        Configuration used to initialize ClientProtocol.
-   *
+   * @param config Configuration used to initialize ClientProtocol.
    * @return ClientProtocol
-   *
    * @throws IOException
    */
   private static ClientProtocol getClientProtocol(ConfigurationSource config)
@@ -244,16 +244,12 @@ public final class OzoneClientFactory {
   /**
    * Returns an instance of Protocol class.
    *
-   *
-   * @param config
-   *        Configuration used to initialize ClientProtocol.
-   *
+   * @param config Configuration used to initialize ClientProtocol.
    * @return ClientProtocol
-   *
    * @throws IOException
    */
   private static ClientProtocol getClientProtocol(ConfigurationSource config,
-      String omServiceId) throws IOException {
+                                                  String omServiceId) throws IOException {
     try {
       return new RpcClient(config, omServiceId);
     } catch (Exception e) {
@@ -269,4 +265,10 @@ public final class OzoneClientFactory {
     }
   }
 
+  /**
+   * Provides a ClientProtocol instance.
+   */
+  public interface ClientProtocolProvider {
+    ClientProtocol provide(ConfigurationSource config, String omServiceId) throws IOException;
+  }
 }
