@@ -4199,6 +4199,54 @@
       Ex: s3g/_HOST@REALM.COM</description>
   </property>
   <property>
+    <name>ozone.s3g.object.cache.enabled</name>
+    <value>false</value>
+    <tag>OZONE, S3GATEWAY</tag>
+    <description>Enable or disable the S3Gateway object cache.</description>
+  </property>
+  <property>
+    <name>ozone.s3g.object.cache.metrics.enabled</name>
+    <value>true</value>
+    <tag>OZONE, S3GATEWAY</tag>
+    <description>Enable or disable metrics for the S3Gateway object cache.</description>
+  </property>
+  <property>
+    <name>ozone.s3g.object.cache.volume.size</name>
+    <value>10</value>
+    <tag>OZONE, S3GATEWAY</tag>
+    <description>Maximum number of entries in the S3Gateway volume cache.</description>
+  </property>
+  <property>
+    <name>ozone.s3g.object.cache.volume.ttl.ms</name>
+    <value>3000</value>
+    <tag>OZONE, S3GATEWAY</tag>
+    <description>TTL in milliseconds for entries in the S3Gateway volume cache.</description>
+  </property>
+  <property>
+    <name>ozone.s3g.object.cache.bucket.size</name>
+    <value>100</value>
+    <tag>OZONE, S3GATEWAY</tag>
+    <description>Maximum number of entries in the S3Gateway bucket cache.</description>
+  </property>
+  <property>
+    <name>ozone.s3g.object.cache.bucket.ttl.ms</name>
+    <value>3000</value>
+    <tag>OZONE, S3GATEWAY</tag>
+    <description>TTL in milliseconds for entries in the S3Gateway bucket cache.</description>
+  </property>
+  <property>
+    <name>ozone.s3g.object.cache.key.size</name>
+    <value>1000</value>
+    <tag>OZONE, S3GATEWAY</tag>
+    <description>Maximum number of entries in the S3Gateway key cache.</description>
+  </property>
+  <property>
+    <name>ozone.s3g.object.cache.key.ttl.ms</name>
+    <value>3000</value>
+    <tag>OZONE, S3GATEWAY</tag>
+    <description>TTL in milliseconds for entries in the S3Gateway key cache.</description>
+  </property>
+  <property>
     <name>hdds.container.checksum.verification.enabled</name>
     <value>true</value>
     <tag>OZONE, DATANODE</tag>
