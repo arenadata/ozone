@@ -508,7 +508,7 @@ public class RpcClient implements ClientProtocol {
     return resp;
   }
 
-  private void updateS3Principal(String userPrincipal) {
+  protected void updateS3Principal(String userPrincipal) {
     S3Auth s3Auth = this.getThreadLocalS3Auth();
     // Update user principal if needed to be used for KMS client
     if (s3Auth != null) {
@@ -1880,8 +1880,7 @@ public class RpcClient implements ClientProtocol {
     return getOzoneKeyDetails(keyInfo);
   }
 
-  @Nonnull
-  private OmKeyInfo getS3KeyInfo(
+  protected KeyInfoWithVolumeContext getS3KeyInfoWithS3Ctx(
       String bucketName, String keyName, boolean isHeadOp) throws IOException {
     verifyBucketName(bucketName);
     Objects.requireNonNull(keyName, "keyName == null");
@@ -1897,14 +1896,19 @@ public class RpcClient implements ClientProtocol {
         .setForceUpdateContainerCacheFromSCM(false)
         .setHeadOp(isHeadOp)
         .build();
+    return ozoneManagerClient.getKeyInfo(keyArgs, true);
+  }
+
+  @Nonnull
+  private OmKeyInfo getS3KeyInfo(
+      String bucketName, String keyName, boolean isHeadOp) throws IOException {
     KeyInfoWithVolumeContext keyInfoWithS3Context =
-        ozoneManagerClient.getKeyInfo(keyArgs, true);
+        getS3KeyInfoWithS3Ctx(bucketName, keyName, isHeadOp);
     keyInfoWithS3Context.getUserPrincipal().ifPresent(this::updateS3Principal);
     return keyInfoWithS3Context.getKeyInfo();
   }
 
-  @Nonnull
-  private OmKeyInfo getS3PartKeyInfo(
+  protected KeyInfoWithVolumeContext getS3PartKeyInfoWithS3Ctx(
       String bucketName, String keyName, int partNumber) throws IOException {
     verifyBucketName(bucketName);
     Objects.requireNonNull(keyName, "keyName == null");
@@ -1920,8 +1924,14 @@ public class RpcClient implements ClientProtocol {
         .setForceUpdateContainerCacheFromSCM(false)
         .setMultipartUploadPartNumber(partNumber)
         .build();
+    return ozoneManagerClient.getKeyInfo(keyArgs, true);
+  }
+
+  @Nonnull
+  private OmKeyInfo getS3PartKeyInfo(
+      String bucketName, String keyName, int partNumber) throws IOException {
     KeyInfoWithVolumeContext keyInfoWithS3Context =
-        ozoneManagerClient.getKeyInfo(keyArgs, true);
+        getS3PartKeyInfoWithS3Ctx(bucketName, keyName, partNumber);
     keyInfoWithS3Context.getUserPrincipal().ifPresent(this::updateS3Principal);
     return keyInfoWithS3Context.getKeyInfo();
   }
