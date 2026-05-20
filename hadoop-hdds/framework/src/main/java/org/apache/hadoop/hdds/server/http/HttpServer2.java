@@ -349,10 +349,10 @@ public final class HttpServer2 implements FilterContainer {
       return this;
     }
 
-    public Builder setWebAppFilterPathSpecs(String[] pathSpecs) {
-      this.webAppFilterPathSpecs = pathSpecs == null
+    public Builder setWebAppFilterPathSpecs(String[] filterPathSpecs) {
+      this.webAppFilterPathSpecs = filterPathSpecs == null
           ? DEFAULT_WEB_APP_FILTER_PATH_SPECS.clone()
-          : pathSpecs.clone();
+          : filterPathSpecs.clone();
       return this;
     }
 
