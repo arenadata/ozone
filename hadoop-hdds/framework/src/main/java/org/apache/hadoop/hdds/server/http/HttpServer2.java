@@ -184,6 +184,8 @@ public final class HttpServer2 implements FilterContainer {
   private static final String BIND_ADDRESS = "bind.address";
   private static final String HADOOP_JETTY_LOGS_SERVE_ALIASES = "hadoop.jetty.logs.serve.aliases";
   private static final boolean DEFAULT_HADOOP_JETTY_LOGS_SERVE_ALIASES = true;
+  private static final String[] DEFAULT_WEB_APP_FILTER_PATH_SPECS =
+      new String[] {"*.html", "*.jsp"};
 
   private final AccessControlList adminsAcl;
 
@@ -196,6 +198,7 @@ public final class HttpServer2 implements FilterContainer {
   private final WebAppContext webAppContext;
   private final boolean findPort;
   private final IntegerRanges portRanges;
+  private final String[] webAppFilterPathSpecs;
   private final Map<ServletContextHandler, Boolean> defaultContexts =
       new HashMap<>();
   private final List<String> filterNames = new ArrayList<>();
@@ -225,6 +228,8 @@ public final class HttpServer2 implements FilterContainer {
     private MutableConfigurationSource conf;
     private ConfigurationSource sslConf;
     private String[] pathSpecs;
+    private String[] webAppFilterPathSpecs =
+        DEFAULT_WEB_APP_FILTER_PATH_SPECS.clone();
     private AccessControlList adminsAcl;
     private boolean securityEnabled = false;
     private String usernameConfKey;
@@ -338,6 +343,13 @@ public final class HttpServer2 implements FilterContainer {
 
     public Builder setPathSpec(String[] pathSpec) {
       this.pathSpecs = pathSpec.clone();
+      return this;
+    }
+
+    public Builder setWebAppFilterPathSpecs(String[] pathSpecs) {
+      this.webAppFilterPathSpecs = pathSpecs == null
+          ? DEFAULT_WEB_APP_FILTER_PATH_SPECS.clone()
+          : pathSpecs.clone();
       return this;
     }
 
@@ -585,6 +597,7 @@ public final class HttpServer2 implements FilterContainer {
     this.webAppContext = createWebAppContext(b, adminsAcl, appDir);
     this.xFrameOptionIsEnabled = b.xFrameEnabled;
     this.xFrameOption = b.xFrameOption;
+    this.webAppFilterPathSpecs = b.webAppFilterPathSpecs.clone();
 
     try {
       this.secretProvider =
@@ -1010,12 +1023,15 @@ public final class HttpServer2 implements FilterContainer {
       Map<String, String> parameters) {
 
     FilterHolder filterHolder = createFilterHolder(name, classname, parameters);
-    FilterMapping fmap =
-        createFilterMapping(name, new String[] {"*.html", "*.jsp"});
-    defineFilter(webAppContext, filterHolder, fmap);
+    if (webAppFilterPathSpecs.length == 0) {
+      webAppContext.getServletHandler().addFilter(filterHolder);
+    } else {
+      FilterMapping fmap = createFilterMapping(name, webAppFilterPathSpecs);
+      defineFilter(webAppContext, filterHolder, fmap);
+    }
     LOG.info("Added filter {} (class={}) to context {}", name, classname,
             webAppContext.getDisplayName());
-    fmap = createFilterMapping(name, new String[] {"/*"});
+    FilterMapping fmap = createFilterMapping(name, new String[] {"/*"});
     for (Map.Entry<ServletContextHandler, Boolean> e
         : defaultContexts.entrySet()) {
       if (e.getValue()) {

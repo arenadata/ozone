@@ -68,6 +68,10 @@ ozone.s3g.http.auth.type | kerberos
 ozone.s3g.http.auth.kerberos.principal | HTTP/_HOST@REALM
 ozone.s3g.http.auth.kerberos.keytab| /path/to/HTTP.keytab
 
+For S3 Gateway, SPNEGO authentication protects the WebAdmin and web-console
+HTTP pages. S3-compatible object API requests continue to use S3 credentials
+and SigV4 authentication, and are not authenticated by the WebUI SPNEGO filter.
+
 ### Enable SPNEGO authentication for RECON HTTP
 Property| Value
 -----------------------------------|-----------------------------------------

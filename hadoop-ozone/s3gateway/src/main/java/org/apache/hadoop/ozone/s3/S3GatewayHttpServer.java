@@ -26,6 +26,9 @@ import org.apache.hadoop.hdds.server.http.BaseHttpServer;
  */
 public class S3GatewayHttpServer extends BaseHttpServer {
 
+  private static final String[] NO_WEB_APP_FILTER_PATH_SPECS =
+      new String[0];
+
   /**
    * Default offset between two filters.
    */
@@ -39,6 +42,11 @@ public class S3GatewayHttpServer extends BaseHttpServer {
   @Override
   protected boolean shouldAddDefaultApps() {
     return false;
+  }
+
+  @Override
+  protected String[] getWebAppFilterPathSpecs() {
+    return NO_WEB_APP_FILTER_PATH_SPECS;
   }
 
   @Override
