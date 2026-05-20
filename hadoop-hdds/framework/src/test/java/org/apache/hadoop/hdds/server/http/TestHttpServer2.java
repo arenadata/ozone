@@ -18,8 +18,15 @@
 package org.apache.hadoop.hdds.server.http;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertIterableEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.IOException;
 import java.net.URI;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.eclipse.jetty.server.ServerConnector;
 import org.junit.jupiter.api.Test;
@@ -49,5 +56,71 @@ public class TestHttpServer2 {
       // Check default value in ozone-default.xml
       assertEquals(60000, server.getIdleTimeout());
     }
+  }
+
+  @Test
+  public void addFilterUsesDefaultWebAppPathSpecs() throws Exception {
+    HttpServer2 server = newServer(null);
+    try {
+      addTestFilter(server);
+
+      assertIterableEquals(Arrays.asList("*.html", "*.jsp"),
+          getPathSpecs(server, "testFilter"));
+    } finally {
+      server.stop();
+    }
+  }
+
+  @Test
+  public void addFilterUsesConfiguredWebAppPathSpecs() throws Exception {
+    HttpServer2 server = newServer(new String[] {"/custom/*"});
+    try {
+      addTestFilter(server);
+
+      assertIterableEquals(Collections.singletonList("/custom/*"),
+          getPathSpecs(server, "testFilter"));
+    } finally {
+      server.stop();
+    }
+  }
+
+  @Test
+  public void addFilterCanSkipWebAppPathSpecs() throws Exception {
+    HttpServer2 server = newServer(new String[0]);
+    try {
+      addTestFilter(server);
+
+      assertTrue(getPathSpecs(server, "testFilter").isEmpty());
+      assertIterableEquals(Collections.singletonList("/*"),
+          getPathSpecs(server, "safety"));
+    } finally {
+      server.stop();
+    }
+  }
+
+  private static HttpServer2 newServer(String[] pathSpecs) throws IOException {
+    HttpServer2.Builder builder = new HttpServer2.Builder()
+        .setConf(new OzoneConfiguration())
+        .setName("testing")
+        .addEndpoint(URI.create("http://localhost:0"));
+    if (pathSpecs != null) {
+      builder.setWebAppFilterPathSpecs(pathSpecs);
+    }
+    return builder.build();
+  }
+
+  private static void addTestFilter(HttpServer2 server) {
+    server.addFilter("testFilter",
+        HttpServer2.QuotingInputFilter.class.getName(), Collections.emptyMap());
+  }
+
+  private static List<String> getPathSpecs(HttpServer2 server,
+      String filterName) {
+    return Arrays.stream(server.getWebAppContext().getServletHandler()
+            .getFilterMappings())
+        .filter(mapping -> filterName.equals(mapping.getFilterName()))
+        .flatMap(mapping -> Arrays.stream(mapping.getPathSpecs() == null
+            ? new String[0] : mapping.getPathSpecs()))
+        .collect(Collectors.toList());
   }
 }

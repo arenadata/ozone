@@ -134,6 +134,7 @@ public abstract class BaseHttpServer implements AutoCloseable {
           HddsConfigKeys.HDDS_XFRAME_OPTION_VALUE_DEFAULT);
 
       builder.configureXFrame(xFrameEnabled).setXFrameOption(xFrameOptionValue);
+      builder.setWebAppFilterPathSpecs(getWebAppFilterPathSpecs());
 
       boolean addDefaultApps = shouldAddDefaultApps();
       if (!addDefaultApps) {
@@ -494,6 +495,10 @@ public abstract class BaseHttpServer implements AutoCloseable {
   /** Override to disable the default servlets. */
   protected boolean shouldAddDefaultApps() {
     return true;
+  }
+
+  protected String[] getWebAppFilterPathSpecs() {
+    return null;
   }
 
 }
