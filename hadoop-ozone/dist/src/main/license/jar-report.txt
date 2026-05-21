@@ -21,6 +21,7 @@ share/ozone/lib/bcutil-jdk18on.jar
 share/ozone/lib/bonecp.RELEASE.jar
 share/ozone/lib/caffeine.jar
 share/ozone/lib/cdi-api.SP1.jar
+share/ozone/lib/checker-qual.jar
 share/ozone/lib/commons-beanutils.jar
 share/ozone/lib/commons-cli.jar
 share/ozone/lib/commons-codec.jar
