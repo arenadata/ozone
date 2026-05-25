@@ -194,6 +194,7 @@
       <plugin>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-maven-plugins</artifactId>
+        <version>${hadoop-maven-plugins.version}</version>
         <executions>
           <execution>
             <id>version-info</id>

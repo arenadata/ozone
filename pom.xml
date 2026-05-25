@@ -96,11 +96,12 @@
     <gson.version>2.13.1</gson.version>
     <guava.version>33.5.0-jre</guava.version>
     <guice.version>6.0.0</guice.version>
+    <hadoop-maven-plugins.version>3.4.2</hadoop-maven-plugins.version>
     <!-- versions included in hadoop-thirdparty, update in sync (+ jar-report and LICENSE) -->
     <hadoop-thirdparty.protobuf.artifact>hadoop-shaded-protobuf_3_25</hadoop-thirdparty.protobuf.artifact>
     <hadoop-thirdparty.protobuf.version>3.25.5</hadoop-thirdparty.protobuf.version>
     <hadoop-thirdparty.version>1.4.0</hadoop-thirdparty.version>
-    <hadoop.version>3.4.2</hadoop.version>
+    <hadoop.version>3.4.3.1-4.3.0-1</hadoop.version>
     <hadoop2.version>2.10.2</hadoop2.version>
     <hamcrest.version>2.2</hamcrest.version>
     <hdds.rocks.native.version>${hdds.version}</hdds.rocks.native.version>
@@ -198,7 +199,7 @@
     <protobuf-maven-plugin.version>0.6.1</protobuf-maven-plugin.version>
     <protobuf2.version>2.5.0</protobuf2.version>
     <protobuf3.version>3.25.8</protobuf3.version>
-    <ranger.version>2.6.0</ranger.version>
+    <ranger.version>2.6.0.4-2.2.0-1</ranger.version>
     <!-- versions included in ratis-thirdparty, update in sync -->
     <ratis-thirdparty.grpc.version>1.71.0</ratis-thirdparty.grpc.version>
     <ratis-thirdparty.netty.version>4.1.119.Final</ratis-thirdparty.netty.version>
@@ -1915,7 +1916,7 @@
         <plugin>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-maven-plugins</artifactId>
-          <version>${hadoop.version}</version>
+          <version>${hadoop-maven-plugins.version}</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -2541,6 +2542,10 @@
       </snapshots>
       <id>apache.snapshots.https</id>
       <url>https://repository.apache.org/content/repositories/snapshots</url>
+    </repository>
+    <repository>
+      <id>arenadata</id>
+      <url>https://maven.pkg.github.com/arenadata/*</url>
     </repository>
   </repositories>
 
