@@ -319,29 +319,6 @@ public class CachingS3OzoneRpcClient extends RpcClient {
   }
 
   @Override
-  public OzoneOutputStream createKeyIfNotExists(String volumeName, String bucketName, String keyName,
-                                                long size, ReplicationConfig replicationConfig,
-                                                Map<String, String> metadata, Map<String, String> tags)
-      throws IOException {
-    evictKeyCacheEntry(bucketName, keyName);
-    return withEvictOnClose(
-        super.createKeyIfNotExists(volumeName, bucketName, keyName, size, replicationConfig, metadata, tags),
-        bucketName, keyName);
-  }
-
-  @SuppressWarnings("checkstyle:parameternumber")
-  @Override
-  public OzoneOutputStream rewriteKeyIfMatch(String volumeName, String bucketName, String keyName,
-                                             long size, String expectedETag, ReplicationConfig replicationConfig,
-                                             Map<String, String> metadata, Map<String, String> tags)
-      throws IOException {
-    evictKeyCacheEntry(bucketName, keyName);
-    return withEvictOnClose(
-        super.rewriteKeyIfMatch(volumeName, bucketName, keyName, size, expectedETag, replicationConfig, metadata, tags),
-        bucketName, keyName);
-  }
-
-  @Override
   public OmMultipartUploadCompleteInfo completeMultipartUpload(
       String volumeName, String bucketName, String keyName, String uploadID,
       Map<Integer, String> partsMap) throws IOException {
