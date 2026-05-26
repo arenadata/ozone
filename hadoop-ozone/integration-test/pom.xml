@@ -225,6 +225,10 @@
           <artifactId>log4j</artifactId>
         </exclusion>
         <exclusion>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+        <exclusion>
           <groupId>org.slf4j</groupId>
           <artifactId>*</artifactId>
         </exclusion>

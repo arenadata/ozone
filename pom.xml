@@ -97,6 +97,8 @@
     <guava.version>33.5.0-jre</guava.version>
     <guice.version>6.0.0</guice.version>
     <hadoop-maven-plugins.version>3.4.2</hadoop-maven-plugins.version>
+    <!-- Arenadata Hadoop does not expose hadoop-kms tests classifier to CI. -->
+    <hadoop.kms.tests.version>3.4.3</hadoop.kms.tests.version>
     <hadoop.version>3.4.3.1-4.3.0-1</hadoop.version>
     <hadoop2.version>2.10.2</hadoop2.version>
     <hamcrest.version>2.2</hamcrest.version>
@@ -939,7 +941,7 @@
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-kms</artifactId>
-        <version>${hadoop.version}</version>
+        <version>${hadoop.kms.tests.version}</version>
         <type>test-jar</type>
       </dependency>
       <dependency>
