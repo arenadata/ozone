@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.om.snapshot;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ACL_ENABLED;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_INTERVAL;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_FS_ITERATE_BATCH_SIZE;
+import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_SNAPSHOT_DEEP_CLEANING_ENABLED;
 import static org.apache.hadoop.ozone.snapshot.SnapshotDiffResponse.JobStatus.DONE;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -190,8 +191,8 @@ public class TestSnapshotDirectoryCleaningService {
       }
     }
 
-    assertTableRowCount(keyTable, 14);
-    assertTableRowCount(dirTable, 13);
+    assertBucketTableRowCount(keyTable, 14);
+    assertBucketTableRowCount(dirTable, 13);
     // Create snapshot
     client.getObjectStore().createSnapshot(volumeName, bucketName, "snap1");
 
@@ -214,13 +215,13 @@ public class TestSnapshotDirectoryCleaningService {
       }
     }
 
-    assertTableRowCount(deletedDirTable, 0);
-    assertTableRowCount(keyTable, 34);
-    assertTableRowCount(dirTable, 13);
+    assertBucketTableRowCount(deletedDirTable, 0);
+    assertBucketTableRowCount(keyTable, 34);
+    assertBucketTableRowCount(dirTable, 13);
     Path appRoot0 = new Path(root, "appRoot0");
     // Only parentDir0-2/childFile under appRoot0 is exclusive for snap1
     fs.delete(appRoot0, true);
-    assertTableRowCount(deletedDirTable, 1);
+    assertBucketTableRowCount(deletedDirTable, 1);
     client.getObjectStore().createSnapshot(volumeName, bucketName, "snap2");
 
     // Delete testKey0-9
@@ -230,7 +231,7 @@ public class TestSnapshotDirectoryCleaningService {
     }
 
     fs.delete(root, true);
-    assertTableRowCount(deletedKeyTable, 10);
+    assertDeletedKeyTableRowCount(deletedKeyTable, 10);
     client.getObjectStore().createSnapshot(volumeName, bucketName, "snap3");
     long prevRunCount = directoryDeletingService.getRunCount().get();
     GenericTestUtils.waitFor(() -> directoryDeletingService.getRunCount().get()
@@ -249,6 +250,10 @@ public class TestSnapshotDirectoryCleaningService {
         iterator = snapshotInfoTable.iterator()) {
       while (iterator.hasNext()) {
         Table.KeyValue<String, SnapshotInfo> snapshotEntry = iterator.next();
+        if (!volumeName.equals(snapshotEntry.getValue().getVolumeName())
+            || !bucketName.equals(snapshotEntry.getValue().getBucketName())) {
+          continue;
+        }
         String snapshotName = snapshotEntry.getValue().getName();
 
         GenericTestUtils.waitFor(() -> {
@@ -340,6 +345,23 @@ public class TestSnapshotDirectoryCleaningService {
         120000); // 2 minutes
   }
 
+  private void assertBucketTableRowCount(Table<String, ?> table, int count)
+      throws TimeoutException, InterruptedException, IOException {
+    String dbKeyPrefix = getBucketDbKeyPrefix();
+    GenericTestUtils.waitFor(
+        () -> assertTableRowCount(count, table, dbKeyPrefix), 1000,
+        120000); // 2 minutes
+  }
+
+  private void assertDeletedKeyTableRowCount(
+      Table<String, RepeatedOmKeyInfo> table, int count)
+      throws TimeoutException, InterruptedException, IOException {
+    long bucketId = getBucketId();
+    GenericTestUtils.waitFor(
+        () -> assertDeletedKeyTableRowCount(count, table, bucketId), 1000,
+        120000); // 2 minutes
+  }
+
   private boolean assertTableRowCount(int expectedCount,
                                       Table<String, ?> table) {
     AtomicLong count = new AtomicLong(0L);
@@ -349,5 +371,52 @@ public class TestSnapshotDirectoryCleaningService {
           count.get(), expectedCount);
     });
     return count.get() == expectedCount;
+  }
+
+  private boolean assertTableRowCount(int expectedCount, Table<String, ?> table,
+                                      String dbKeyPrefix) {
+    AtomicLong count = new AtomicLong(0L);
+    assertDoesNotThrow(() -> {
+      try (Table.KeyValueIterator<String, ?> iterator = table.iterator()) {
+        while (iterator.hasNext()) {
+          if (iterator.next().getKey().startsWith(dbKeyPrefix)) {
+            count.incrementAndGet();
+          }
+        }
+      }
+      LOG.info("{} actual row count={}, expectedCount={}, prefix={}",
+          table.getName(), count.get(), expectedCount, dbKeyPrefix);
+    });
+    return count.get() == expectedCount;
+  }
+
+  private boolean assertDeletedKeyTableRowCount(int expectedCount,
+      Table<String, RepeatedOmKeyInfo> table, long bucketId) {
+    AtomicLong count = new AtomicLong(0L);
+    assertDoesNotThrow(() -> {
+      try (Table.KeyValueIterator<String, RepeatedOmKeyInfo>
+          iterator = table.iterator()) {
+        while (iterator.hasNext()) {
+          if (iterator.next().getValue().getBucketId() == bucketId) {
+            count.incrementAndGet();
+          }
+        }
+      }
+      LOG.info("{} actual row count={}, expectedCount={}, bucketId={}",
+          table.getName(), count.get(), expectedCount, bucketId);
+    });
+    return count.get() == expectedCount;
+  }
+
+  private String getBucketDbKeyPrefix() throws IOException {
+    long volumeId = cluster.getOzoneManager().getMetadataManager()
+        .getVolumeId(volumeName);
+    long bucketId = getBucketId();
+    return OM_KEY_PREFIX + volumeId + OM_KEY_PREFIX + bucketId + OM_KEY_PREFIX;
+  }
+
+  private long getBucketId() throws IOException {
+    return cluster.getOzoneManager().getMetadataManager()
+        .getBucketId(volumeName, bucketName);
   }
 }

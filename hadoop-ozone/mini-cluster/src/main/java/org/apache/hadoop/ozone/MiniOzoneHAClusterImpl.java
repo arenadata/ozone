@@ -235,6 +235,17 @@ public class MiniOzoneHAClusterImpl extends MiniOzoneClusterImpl {
     scmhaService.removeInstance(scm);
   }
 
+  @Override
+  public void restartStorageContainerManager(boolean waitForDatanode)
+      throws TimeoutException, InterruptedException, IOException,
+      AuthenticationException {
+    StorageContainerManager scm = getActiveSCM();
+    if (scm == null) {
+      scm = scmhaService.getServices().get(0);
+    }
+    restartStorageContainerManager(scm, waitForDatanode);
+  }
+
   public StorageContainerManager restartStorageContainerManager(
       StorageContainerManager scm, boolean waitForSCM)
       throws IOException, TimeoutException,
@@ -338,12 +349,12 @@ public class MiniOzoneHAClusterImpl extends MiniOzoneClusterImpl {
   public static class Builder extends MiniOzoneClusterImpl.Builder {
 
     private static final String OM_NODE_ID_PREFIX = "omNode-";
-    private final List<OzoneManager> activeOMs = new ArrayList<>();
-    private final List<OzoneManager> inactiveOMs = new ArrayList<>();
+    private List<OzoneManager> activeOMs = new ArrayList<>();
+    private List<OzoneManager> inactiveOMs = new ArrayList<>();
 
     private static final String SCM_NODE_ID_PREFIX = "scmNode-";
-    private final List<StorageContainerManager> activeSCMs = new ArrayList<>();
-    private final List<StorageContainerManager> inactiveSCMs = new ArrayList<>();
+    private List<StorageContainerManager> activeSCMs = new ArrayList<>();
+    private List<StorageContainerManager> inactiveSCMs = new ArrayList<>();
 
     private String omServiceId;
     private int numOfOMs;
@@ -394,6 +405,7 @@ public class MiniOzoneHAClusterImpl extends MiniOzoneClusterImpl {
 
     @Override
     public MiniOzoneHAClusterImpl build() throws IOException {
+      resetHAServiceLists();
       if (numOfActiveOMs > numOfOMs) {
         throw new IllegalArgumentException("Number of active OMs cannot be " +
             "more than the total number of OMs");
@@ -442,6 +454,13 @@ public class MiniOzoneHAClusterImpl extends MiniOzoneClusterImpl {
       }
       prepareForNextBuild();
       return cluster;
+    }
+
+    private void resetHAServiceLists() {
+      activeOMs = new ArrayList<>();
+      inactiveOMs = new ArrayList<>();
+      activeSCMs = new ArrayList<>();
+      inactiveSCMs = new ArrayList<>();
     }
 
     protected int numberOfOzoneManagers() {
@@ -937,8 +956,10 @@ public class MiniOzoneHAClusterImpl extends MiniOzoneClusterImpl {
         }
       }
       this.services = new ArrayList<>(serviceMap.values());
-      this.activeServices = activeList;
-      this.inactiveServices = inactiveList;
+      this.activeServices = activeList != null
+          ? new ArrayList<>(activeList) : new ArrayList<>();
+      this.inactiveServices = inactiveList != null
+          ? new ArrayList<>(inactiveList) : new ArrayList<>();
       this.serviceId = serviceId;
 
       // If the serviceID is null, then this should be a non-HA cluster.

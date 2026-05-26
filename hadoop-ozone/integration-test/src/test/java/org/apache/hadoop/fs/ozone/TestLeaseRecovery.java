@@ -39,7 +39,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.ConnectException;
-import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -54,6 +54,7 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.conf.StorageUnit;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.XceiverClientGrpc;
+import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineNotFoundException;
@@ -61,6 +62,7 @@ import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.utils.IOUtils;
 import org.apache.hadoop.ozone.ClientConfigForTesting;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
+import org.apache.hadoop.ozone.OFSPath;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneTestUtils;
 import org.apache.hadoop.ozone.TestDataUtil;
@@ -70,6 +72,9 @@ import org.apache.hadoop.ozone.container.keyvalue.KeyValueHandler;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.BucketLayout;
+import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
+import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
+import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.utils.FaultInjectorImpl;
 import org.apache.ozone.test.GenericTestUtils;
 import org.apache.ozone.test.GenericTestUtils.LogCapturer;
@@ -576,9 +581,24 @@ public class TestLeaseRecovery extends OzoneTestBase {
 
   private ContainerInfo closeLatestContainer() throws IOException, TimeoutException, InterruptedException {
     StorageContainerManager scm = cluster.getStorageContainerManager();
-    ContainerInfo container = new LinkedList<>(scm.getContainerManager().getContainers()).getLast();
+    ContainerInfo container = scm.getContainerManager().getContainer(
+        ContainerID.valueOf(getLatestLocation(file).getContainerID()));
     OzoneTestUtils.closeContainer(scm, container);
     return container;
+  }
+
+  private OmKeyLocationInfo getLatestLocation(Path key) throws IOException {
+    OFSPath ofsPath = new OFSPath(key.toString(), conf);
+    OmKeyArgs keyArgs = new OmKeyArgs.Builder()
+        .setVolumeName(ofsPath.getVolumeName())
+        .setBucketName(ofsPath.getBucketName())
+        .setKeyName(ofsPath.getKeyName())
+        .build();
+    OmKeyInfo keyInfo = cluster.getOzoneManager().lookupKey(keyArgs);
+    List<OmKeyLocationInfo> locations =
+        keyInfo.getLatestVersionLocations().getLocationList();
+    assertFalse(locations.isEmpty());
+    return locations.get(locations.size() - 1);
   }
 
   @Test

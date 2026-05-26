@@ -373,12 +373,25 @@ public class TestOzoneManagerHASnapshot {
     checkSnapshotIsPurgedFromDB(omLeader, tableKey);
 
     // Resume the DoubleBuffer on the follower and flush the pending transactions.
-    omFollowerDoubleBuffer.resume();
-    CompletableFuture.supplyAsync(() -> {
-      omFollowerDoubleBuffer.flushTransactions();
-      return null;
+    CompletableFuture<Void> awaitFlush = CompletableFuture.runAsync(() -> {
+      try {
+        omFollowerDoubleBuffer.awaitFlush();
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new RuntimeException(e);
+      }
     });
-    omFollowerDoubleBuffer.awaitFlush();
+    Thread flushThread = new Thread(omFollowerDoubleBuffer::flushTransactions,
+        "manual-om-double-buffer-flush");
+    try {
+      omFollowerDoubleBuffer.resume();
+      flushThread.start();
+      awaitFlush.get(60, TimeUnit.SECONDS);
+    } finally {
+      omFollowerDoubleBuffer.stopDaemon();
+      flushThread.interrupt();
+      flushThread.join(60000);
+    }
     checkSnapshotIsPurgedFromDB(omFollower, tableKey);
   }
 

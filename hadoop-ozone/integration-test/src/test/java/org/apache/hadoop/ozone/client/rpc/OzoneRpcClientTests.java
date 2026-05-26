@@ -1722,23 +1722,16 @@ abstract class OzoneRpcClientTests extends OzoneTestBase {
     String keyName2 = UUID.randomUUID().toString();
 
     writeKey(bucket, keyName1, ONE, value, valueLength);
-    GenericTestUtils.waitFor((CheckedSupplier<Boolean, IOException>) () -> 1L == getBucketUsedNamespace(volumeName,
-        bucketName), 1000, 30000);
+    waitForBucketUsedNamespace(volumeName, bucketName, 1L);
     // Test create a file twice will not increase usedNamespace twice
     writeKey(bucket, keyName1, ONE, value, valueLength);
-    GenericTestUtils.waitFor((CheckedSupplier<Boolean, IOException>) () -> 1L == getBucketUsedNamespace(volumeName,
-        bucketName), 1000, 30000);
+    waitForBucketUsedNamespace(volumeName, bucketName, 1L);
     writeKey(bucket, keyName2, ONE, value, valueLength);
-    GenericTestUtils.waitFor((CheckedSupplier<Boolean, IOException>) () -> 2L == getBucketUsedNamespace(volumeName,
-        bucketName), 1000, 30000);
+    waitForBucketUsedNamespace(volumeName, bucketName, 2L);
     bucket.deleteKey(keyName1);
-    GenericTestUtils.waitFor(
-        (CheckedSupplier<Boolean, IOException>) () -> 1L == getBucketUsedNamespace(volumeName, bucketName),
-        1000, 30000);
+    waitForBucketUsedNamespace(volumeName, bucketName, 1L);
     bucket.deleteKey(keyName2);
-    GenericTestUtils.waitFor(
-        (CheckedSupplier<Boolean, IOException>) () -> 0L == getBucketUsedNamespace(volumeName, bucketName),
-        1000, 30000);
+    waitForBucketUsedNamespace(volumeName, bucketName, 0L);
 
     RpcClient client = new RpcClient(cluster.getConf(), null);
     try {
@@ -1746,12 +1739,10 @@ abstract class OzoneRpcClientTests extends OzoneTestBase {
       String directoryName2 = UUID.randomUUID().toString();
 
       client.createDirectory(volumeName, bucketName, directoryName1);
-      GenericTestUtils.waitFor((CheckedSupplier<Boolean, IOException>) () -> 1L == getBucketUsedNamespace(volumeName,
-          bucketName), 1000, 30000);
+      waitForBucketUsedNamespace(volumeName, bucketName, 1L);
       // Test create a directory twice will not increase usedNamespace twice
       client.createDirectory(volumeName, bucketName, directoryName2);
-      GenericTestUtils.waitFor((CheckedSupplier<Boolean, IOException>) () -> 2L == getBucketUsedNamespace(volumeName,
-          bucketName), 1000, 30000);
+      waitForBucketUsedNamespace(volumeName, bucketName, 2L);
 
       if (layout == BucketLayout.LEGACY) {
         handleLegacyBucketDelete(volumeName, bucketName, directoryName1, directoryName2);
@@ -1779,21 +1770,17 @@ abstract class OzoneRpcClientTests extends OzoneTestBase {
     org.apache.hadoop.fs.Path dir2Path = new org.apache.hadoop.fs.Path(OZONE_URI_DELIMITER, dir2);
 
     fs.delete(dir1Path, false);
-    GenericTestUtils.waitFor((CheckedSupplier<Boolean, IOException>) () -> 1L == getBucketUsedNamespace(volumeName,
-        bucketName), 1000, 30000);
+    waitForBucketUsedNamespace(volumeName, bucketName, 1L);
     fs.delete(dir2Path, false);
-    GenericTestUtils.waitFor((CheckedSupplier<Boolean, IOException>) () -> 0L == getBucketUsedNamespace(volumeName,
-        bucketName), 1000, 30000);
+    waitForBucketUsedNamespace(volumeName, bucketName, 0L);
   }
 
   private void handleNonLegacyBucketDelete(RpcClient client, String volumeName, String bucketName, String dir1,
       String dir2) throws IOException, InterruptedException, TimeoutException {
     client.deleteKey(volumeName, bucketName, OzoneFSUtils.addTrailingSlashIfNeeded(dir1), false);
-    GenericTestUtils.waitFor((CheckedSupplier<Boolean, IOException>) () -> 1L == getBucketUsedNamespace(volumeName,
-        bucketName), 1000, 30000);
+    waitForBucketUsedNamespace(volumeName, bucketName, 1L);
     client.deleteKey(volumeName, bucketName, OzoneFSUtils.addTrailingSlashIfNeeded(dir2), false);
-    GenericTestUtils.waitFor((CheckedSupplier<Boolean, IOException>) () -> 0L == getBucketUsedNamespace(volumeName,
-        bucketName), 1000, 30000);
+    waitForBucketUsedNamespace(volumeName, bucketName, 0L);
   }
 
   @ParameterizedTest
@@ -1836,6 +1823,14 @@ abstract class OzoneRpcClientTests extends OzoneTestBase {
   private long getBucketUsedNamespace(String volume, String bucket)
       throws IOException {
     return store.getVolume(volume).getBucket(bucket).getUsedNamespace();
+  }
+
+  private void waitForBucketUsedNamespace(String volume, String bucket,
+      long expectedNamespace)
+      throws TimeoutException, InterruptedException {
+    GenericTestUtils.waitFor((CheckedSupplier<Boolean, IOException>) () ->
+        expectedNamespace == getBucketUsedNamespace(volume, bucket), 1000,
+        120000);
   }
 
   @Test

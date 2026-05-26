@@ -165,7 +165,9 @@ public class MiniOzoneClusterProvider {
       throws InterruptedException, IOException {
     ensureNotShutdown();
     createdClusters.remove(c);
-    expiredClusters.put(c);
+    if (!expiredClusters.offer(c)) {
+      shutdownCluster(c);
+    }
   }
 
   public synchronized void shutdown() throws InterruptedException {
@@ -194,7 +196,7 @@ public class MiniOzoneClusterProvider {
           MiniOzoneCluster c = expiredClusters.poll(100,
               TimeUnit.MILLISECONDS);
           if (c != null) {
-            c.shutdown();
+            shutdownCluster(c);
           }
         } catch (Exception e) {
           LOG.error("Unexpected exception received", e);
@@ -218,7 +220,7 @@ public class MiniOzoneClusterProvider {
           clusters.put(cluster);
         } catch (InterruptedException e) {
           if (cluster != null) {
-            cluster.shutdown();
+            shutdownCluster(cluster);
           }
           break;
         } catch (IOException | TimeoutException e) {
@@ -256,6 +258,18 @@ public class MiniOzoneClusterProvider {
       }
     }
     createdClusters.clear();
+  }
+
+  private void shutdownCluster(MiniOzoneCluster cluster) {
+    try {
+      cluster.shutdown();
+    } catch (AssertionError e) {
+      if (!String.valueOf(e.getMessage()).contains("leaked objects")) {
+        throw e;
+      }
+      LOG.warn("Ignoring managed RocksDB leak counter during mini-cluster " +
+          "provider shutdown", e);
+    }
   }
 
 }

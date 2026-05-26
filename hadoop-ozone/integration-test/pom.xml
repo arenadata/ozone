@@ -25,6 +25,10 @@
   <name>Apache Ozone Integration Tests</name>
   <description>Apache Ozone Integration Tests</description>
 
+  <properties>
+    <surefire.fork.timeout>2400</surefire.fork.timeout>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>ch.qos.reload4j</groupId>
