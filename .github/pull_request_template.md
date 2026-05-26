@@ -1,6 +1,7 @@
 ## What changes were proposed in this pull request?
 Provide a one-liner summary of the changes in the PR **Title** field above.
-It should be in the form of `HDDS-1234. Short summary of the change`.
+It should be in the form of `PROJECT-1234. Short summary of the change` or
+`PROJECT-1234: Short summary of the change`.
 
 Please describe your PR in detail:
 * What changes are proposed in the PR? and Why? It would be better if it is written from third person's
@@ -19,8 +20,8 @@ Examples of well-written pull requests:
 
 ## What is the link to the Apache JIRA
 
-Please create an issue in ASF JIRA before opening a pull request, and you need to set the title of the pull
-request which starts with the corresponding JIRA issue number. (e.g. HDDS-XXXX. Fix a typo in YYY.)
+Please create or link a JIRA issue before opening a pull request, and set the title of the pull
+request so it starts with the corresponding JIRA issue key. (e.g. PROJECT-XXXX. Fix a typo in YYY.)
 
 (Please replace this section with the link to the Apache JIRA)
 
