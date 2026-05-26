@@ -339,12 +339,6 @@ public class TestSnapshotDirectoryCleaningService {
         diff.getDiffList());
   }
 
-  private void assertTableRowCount(Table<String, ?> table, int count)
-      throws TimeoutException, InterruptedException {
-    GenericTestUtils.waitFor(() -> assertTableRowCount(count, table), 1000,
-        120000); // 2 minutes
-  }
-
   private void assertBucketTableRowCount(Table<String, ?> table, int count)
       throws TimeoutException, InterruptedException, IOException {
     String dbKeyPrefix = getBucketDbKeyPrefix();
@@ -360,17 +354,6 @@ public class TestSnapshotDirectoryCleaningService {
     GenericTestUtils.waitFor(
         () -> assertDeletedKeyTableRowCount(count, table, bucketId), 1000,
         120000); // 2 minutes
-  }
-
-  private boolean assertTableRowCount(int expectedCount,
-                                      Table<String, ?> table) {
-    AtomicLong count = new AtomicLong(0L);
-    assertDoesNotThrow(() -> {
-      count.set(cluster.getOzoneManager().getMetadataManager().countRowsInTable(table));
-      LOG.info("{} actual row count={}, expectedCount={}", table.getName(),
-          count.get(), expectedCount);
-    });
-    return count.get() == expectedCount;
   }
 
   private boolean assertTableRowCount(int expectedCount, Table<String, ?> table,
