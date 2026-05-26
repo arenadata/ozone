@@ -56,7 +56,13 @@ on:
         description: Java version to use
         default: '21'
         required: true
+
+permissions:
+  contents: read
+  packages: read
+
 env:
+  MAVEN_ARGS: --batch-mode --settings ${{ github.workspace }}/dev-support/ci/maven-settings.xml
   MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryHandler.class=standard -Dmaven.wagon.http.retryHandler.count=3
   TEST_CLASS: ${{ github.event.inputs.test-class}}
   TEST_METHOD: ${{ github.event.inputs.test-name }}
@@ -101,6 +107,8 @@ jobs:
       - ratis
     runs-on: ubuntu-24.04
     timeout-minutes: 60
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout project
         uses: actions/checkout@v4
@@ -156,6 +164,8 @@ jobs:
       - build
     name: Run-Split
     runs-on: ubuntu-24.04
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     strategy:
       matrix:
         split: ${{fromJson(needs.prepare-job.outputs.matrix)}}  # Define  splits

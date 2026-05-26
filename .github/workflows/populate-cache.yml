@@ -29,9 +29,18 @@ on:
   workflow_call:
   workflow_dispatch:
 
+permissions:
+  contents: read
+  packages: read
+
+env:
+  MAVEN_ARGS: --batch-mode --settings ${{ github.workspace }}/dev-support/ci/maven-settings.xml
+
 jobs:
   build:
     runs-on: ubuntu-24.04
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout project
         uses: actions/checkout@v4

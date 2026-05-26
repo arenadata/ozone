@@ -20,6 +20,11 @@ on:
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+  packages: read
+
 jobs:
   CI:
     if: github.event_name == 'pull_request' || !startsWith(github.ref_name, 'dependabot')

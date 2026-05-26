@@ -26,6 +26,11 @@ on:
         description: Ozone ref (branch, tag or commit SHA)
         default: ''
         required: false
+
+permissions:
+  contents: read
+  packages: read
+
 env:
   BUILD_ARGS: "-Pdist -Psrc -Dmaven.javadoc.skip=true -Drocks_tools_native"
   # Minimum required Java version for running Ozone is defined in pom.xml (javac.version).
@@ -308,6 +313,8 @@ jobs:
       - build-info
       - acceptance
       - integration
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout project
         uses: actions/checkout@v4

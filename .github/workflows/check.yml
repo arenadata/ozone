@@ -129,6 +129,10 @@ on:
         default: true
         required: false
 
+permissions:
+  contents: read
+  packages: read
+
 env:
   HADOOP_IMAGE: ghcr.io/apache/hadoop
   MAVEN_ARGS: --batch-mode --settings ${{ github.workspace }}/dev-support/ci/maven-settings.xml
@@ -142,6 +146,8 @@ jobs:
     name: ${{ (inputs.split && format('{0} ({1})', inputs.script, inputs.split)) || inputs.script }}
     runs-on: ${{ inputs.runner }}
     timeout-minutes: ${{ inputs.timeout-minutes }}
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout project
         if: ${{ !inputs.needs-ozone-source-tarball }}

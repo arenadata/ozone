@@ -37,6 +37,11 @@ on:
         default: 'master'
         required: true
 run-name: Test Ozone ${{ inputs.ref }} with Ratis ${{ inputs.ratis-repo }} @ ${{ inputs.ratis-ref }}
+
+permissions:
+  contents: read
+  packages: read
+
 jobs:
   ratis:
     uses: ./.github/workflows/build-ratis.yml
