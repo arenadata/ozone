@@ -1,0 +1,141 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Delete Package Version
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Exact Maven package version to delete from GitHub Packages
+        required: true
+        type: string
+
+run-name: Delete package version ${{ inputs.version }}
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  PACKAGE_PREFIX: org.apache.ozone
+  PACKAGE_TYPE: maven
+
+jobs:
+  discover:
+    runs-on: ubuntu-24.04
+    outputs:
+      count: ${{ steps.find.outputs.count }}
+      matrix: ${{ steps.find.outputs.matrix }}
+    env:
+      GH_TOKEN: ${{ secrets.PACKAGES_DELETE_TOKEN || secrets.GITHUB_TOKEN }}
+      OWNER_TYPE: ${{ github.event.repository.owner.type }}
+      VERSION: ${{ inputs.version }}
+    steps:
+      - name: Find package version ids
+        id: find
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ ! "${VERSION}" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]*$ ]]; then
+            echo "::error::Invalid version '${VERSION}'."
+            exit 1
+          fi
+
+          owner="${GITHUB_REPOSITORY_OWNER}"
+          case "${OWNER_TYPE}" in
+            Organization)
+              packages_endpoint="/orgs/${owner}/packages?package_type=${PACKAGE_TYPE}&per_page=100"
+              versions_endpoint_prefix="/orgs/${owner}/packages/${PACKAGE_TYPE}"
+              ;;
+            User)
+              packages_endpoint="/users/${owner}/packages?package_type=${PACKAGE_TYPE}&per_page=100"
+              versions_endpoint_prefix="/users/${owner}/packages/${PACKAGE_TYPE}"
+              ;;
+            *)
+              echo "::error::Unsupported repository owner type '${OWNER_TYPE}'."
+              exit 1
+              ;;
+          esac
+
+          matches="${RUNNER_TEMP}/package-version-matches.jsonl"
+          : > "${matches}"
+
+          mapfile -t package_names < <(
+            gh api --paginate "${packages_endpoint}" \
+              --jq ".[] | select(.name | startswith(env.PACKAGE_PREFIX)) | .name" \
+              | sort -u
+          )
+
+          for package_name in "${package_names[@]}"; do
+            encoded_package_name="$(jq -nr --arg value "${package_name}" '$value | @uri')"
+            mapfile -t version_ids < <(
+              gh api --paginate "${versions_endpoint_prefix}/${encoded_package_name}/versions?per_page=100" \
+                --jq '.[] | select(.name == env.VERSION) | .node_id'
+            )
+
+            if [[ "${#version_ids[@]}" -eq 0 ]]; then
+              continue
+            fi
+
+            package_version_ids="$(IFS=,; echo "${version_ids[*]}")"
+            jq -cn \
+              --arg package_name "${package_name}" \
+              --arg package_version_ids "${package_version_ids}" \
+              '{package_name: $package_name, package_version_ids: $package_version_ids}' \
+              >> "${matches}"
+          done
+
+          matrix="$(jq -cs '{include: .}' "${matches}")"
+          count="$(jq '.include | length' <<< "${matrix}")"
+
+          {
+            echo "matrix<<EOF"
+            echo "${matrix}"
+            echo "EOF"
+            echo "count=${count}"
+          } >> "${GITHUB_OUTPUT}"
+
+          if [[ "${count}" -eq 0 ]]; then
+            echo "::error::No ${PACKAGE_TYPE} package versions named '${VERSION}' found for prefix '${PACKAGE_PREFIX}'."
+            exit 1
+          fi
+
+          {
+            echo "### Package versions selected for deletion"
+            echo
+            echo "| Package | Version |"
+            echo "| --- | --- |"
+            jq -r --arg version "${VERSION}" '.include[] | "| `\(.package_name)` | `\($version)` |"' <<< "${matrix}"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+  delete:
+    needs:
+      - discover
+    runs-on: ubuntu-24.04
+    if: needs.discover.outputs.count != '0'
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.discover.outputs.matrix) }}
+    steps:
+      - name: Delete ${{ matrix.package_name }} ${{ inputs.version }}
+        uses: actions/delete-package-versions@v5
+        with:
+          owner: ${{ github.repository_owner }}
+          package-name: ${{ matrix.package_name }}
+          package-type: maven
+          package-version-ids: ${{ matrix.package_version_ids }}
+          token: ${{ secrets.PACKAGES_DELETE_TOKEN || secrets.GITHUB_TOKEN }}
