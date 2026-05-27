@@ -166,9 +166,9 @@ jobs:
     uses: ./.github/workflows/check.yml
     with:
       checkout-fetch-depth: ${{ matrix.check != 'bats' && 1 || 0 }}
-      # Most basic checks still run on Java 8 (HDDS-10150).  SpotBugs and
-      # PMD run test-compile and need to read Ranger classes built for Java 11.
-      java-version: ${{ (matrix.check == 'findbugs' || matrix.check == 'pmd') && '11' || '8' }}
+      # Most basic checks still run on Java 8 (HDDS-10150).  PMD runs
+      # test-compile and needs to read Ranger classes built for Java 11.
+      java-version: ${{ matrix.check == 'pmd' && '11' || '8' }}
       needs-maven-cache: ${{ !contains('author,bats', matrix.check) }}
       ratis-args: ${{ inputs.ratis_args }}
       script: ${{ matrix.check }}
