@@ -59,11 +59,14 @@ grep '(' ${src} \
     -e "(CDDL\>" -e ' CDDL '\
     -e "(EDL\>" -e "Eclipse Distribution ${L}" \
     -e "(EPL\>" -e "Eclipse Public ${L}" \
+    -e "ISC ${L}" \
     -e "(MIT)" -e "(MIT-0)" -e "\<MIT ${L}" \
     -e "Modified BSD\>" \
     -e "New BSD ${L}" \
     -e "Public Domain" \
     -e "Revised BSD\>" \
+    -e "Unicode/ICU ${L}" \
+    -e "Universal Permissive ${L}" \
     || true ) \
   | sort -u \
   | tee "${REPORT_FILE}"

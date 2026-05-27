@@ -156,6 +156,7 @@ public class TestDirectoryDeletingServiceWithFSO {
       for (FileStatus fileStatus : fileStatuses) {
         fs.delete(fileStatus.getPath(), true);
       }
+      cluster.getOzoneManager().awaitDoubleBufferFlush();
     });
   }
 

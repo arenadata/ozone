@@ -17,7 +17,7 @@
   <parent>
     <groupId>org.apache.ozone</groupId>
     <artifactId>hdds</artifactId>
-    <version>2.1.0</version>
+    <version>2.1.0.1-4.3.0-0</version>
   </parent>
   <artifactId>hdds-rocks-native</artifactId>
   <name>Apache Ozone HDDS RocksDB Tools</name>
@@ -197,6 +197,8 @@
                   <url>https://github.com/facebook/rocksdb/archive/refs/tags/v${rocksdb.version}.tar.gz</url>
                   <outputFileName>rocksdb-v${rocksdb.version}.tar.gz</outputFileName>
                   <outputDirectory>${project.build.directory}/rocksdb</outputDirectory>
+                  <readTimeOut>60000</readTimeOut>
+                  <retries>5</retries>
                 </configuration>
               </execution>
             </executions>

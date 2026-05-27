@@ -55,6 +55,14 @@ load bats-assert/load.bash
   run dev-support/ci/pr_title_check.sh 'HDDS-12345. Hello World'
   assert_output 'OK'
 
+  # non-HDDS Jira project key
+  run dev-support/ci/pr_title_check.sh 'ADH-1234. Hello World'
+  assert_output 'OK'
+
+  # colon after Jira is allowed
+  run dev-support/ci/pr_title_check.sh 'ADH-1234: Hello World'
+  assert_output 'OK'
+
   # PR with tag
   run dev-support/ci/pr_title_check.sh 'HDDS-1234. [Tag] Hello World'
   assert_output 'OK'
@@ -73,9 +81,9 @@ load bats-assert/load.bash
 }
 
 @test "check illegal PR title examples" {
-  # HDDS case matters
+  # Jira project key case matters
   run dev-support/ci/pr_title_check.sh 'Hdds-1234. Hello World'
-  assert_output 'Fail: must start with HDDS'
+  assert_output 'Fail: must start with uppercase Jira project key'
 
   # missing dash in Jira
   run dev-support/ci/pr_title_check.sh 'HDDS 1234. Hello World'
@@ -91,7 +99,7 @@ load bats-assert/load.bash
 
   # missing dot after Jira
   run dev-support/ci/pr_title_check.sh 'HDDS-1234 Hello World'
-  assert_output 'Fail: missing dot after Jira'
+  assert_output 'Fail: missing dot or colon after Jira'
 
   # missing space after Jira
   run dev-support/ci/pr_title_check.sh 'HDDS-1234.Hello World'
@@ -119,25 +127,25 @@ load bats-assert/load.bash
 
   # Invalid revert title 1
   run dev-support/ci/pr_title_check.sh 'revert "HDDS-1234. Hello World'
-  assert_output 'Fail: must start with HDDS'
+  assert_output 'Fail: must start with uppercase Jira project key'
 
   # Invalid revert title 2
   run dev-support/ci/pr_title_check.sh 'Revert"HDDS-1234. Hello World'
-  assert_output 'Fail: must start with HDDS'
+  assert_output 'Fail: must start with uppercase Jira project key'
 
   # Invalid revert title 3
   run dev-support/ci/pr_title_check.sh 'Revert HDDS-1234. Hello World'
-  assert_output 'Fail: must start with HDDS'
+  assert_output 'Fail: must start with uppercase Jira project key'
 
   # Invalid revert title 4
   run dev-support/ci/pr_title_check.sh 'Revert: HDDS-1234. Hello World'
-  assert_output 'Fail: must start with HDDS'
+  assert_output 'Fail: must start with uppercase Jira project key'
 
   # Invalid revert title 5
   run dev-support/ci/pr_title_check.sh 'Revert: "HDDS-1234. Hello World"'
-  assert_output 'Fail: must start with HDDS'
+  assert_output 'Fail: must start with uppercase Jira project key'
 
   # Invalid revert title 6
   run dev-support/ci/pr_title_check.sh 'Revert "Hello World"'
-  assert_output -e 'Fail: must start with HDDS$'
+  assert_output -e 'Fail: must start with uppercase Jira project key$'
 }

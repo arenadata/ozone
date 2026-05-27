@@ -26,6 +26,10 @@ ALL_BASIC_CHECKS="${ALL_BASIC_CHECKS[@]%\]}"
 # Replace commas with spaces to form a space-delimited list
 SPACE_DELIMITED_ALL_CHECKS=$(echo "$ALL_BASIC_CHECKS" | tr -d '"' | tr ',' ' ')
 
+# ADH-7550: disable legacy SpotBugs temporarily. The check will be restored
+# after the Ozone 2.2.0 migration removes the current false-positive noise.
+DISABLED_BASIC_CHECKS=(findbugs)
+
 if [[ -n "${SPACE_DELIMITED_ALL_CHECKS}" ]]; then
   # add framing blanks
   SPACE_DELIMITED_ALL_CHECKS=" ${SPACE_DELIMITED_ALL_CHECKS[*]} "
@@ -38,6 +42,9 @@ if [[ -n "${SPACE_DELIMITED_ALL_CHECKS}" ]]; then
 
     check_list=()
     for item in ${CHECKS[@]}; do
+      if [[ " ${DISABLED_BASIC_CHECKS[*]} " == *" ${item} "* ]]; then
+        continue
+      fi
       # use $item as regex
       if [[ $SPACE_DELIMITED_ALL_CHECKS =~ " $item " ]] ; then
         check_list+=($item)

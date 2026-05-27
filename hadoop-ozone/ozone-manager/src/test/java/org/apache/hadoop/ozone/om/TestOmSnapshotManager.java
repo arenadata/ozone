@@ -26,6 +26,7 @@ import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_SNAPSHOT_CHECKPOINT_DIR;
 import static org.apache.hadoop.ozone.OzoneConsts.SNAPSHOT_CANDIDATE_DIR;
 import static org.apache.hadoop.ozone.OzoneConsts.SNAPSHOT_INFO_TABLE;
+import static org.apache.hadoop.ozone.OzoneConsts.TRANSACTION_INFO_KEY;
 import static org.apache.hadoop.ozone.om.OMDBCheckpointServlet.processFile;
 import static org.apache.hadoop.ozone.om.OmSnapshotManager.OM_HARDLINK_FILE;
 import static org.apache.hadoop.ozone.om.OmSnapshotManager.getSnapshotPath;
@@ -73,6 +74,7 @@ import java.util.stream.Stream;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.scm.HddsWhiteboxTestUtils;
+import org.apache.hadoop.hdds.utils.TransactionInfo;
 import org.apache.hadoop.hdds.utils.db.DBStore;
 import org.apache.hadoop.hdds.utils.db.RDBBatchOperation;
 import org.apache.hadoop.hdds.utils.db.RDBStore;
@@ -182,6 +184,40 @@ class TestOmSnapshotManager {
 
     when(snapshotInfoTable.isEmpty()).thenReturn(true);
     assertTrue(om.getOmSnapshotManager().canDisableFsSnapshot(om.getMetadataManager()));
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testIsSnapshotPurgedHandlesStaleSnapshotChain()
+      throws IOException {
+    SnapshotChainManager staleChain = mock(SnapshotChainManager.class);
+    OMMetadataManager metadataManager = mock(OMMetadataManager.class);
+    Table<String, TransactionInfo> transactionInfoTable = mock(Table.class);
+    Table<String, SnapshotInfo> snapshotInfoTable = mock(Table.class);
+    UUID snapshotId = UUID.randomUUID();
+    when(staleChain.getTableKey(snapshotId)).thenReturn(null);
+    when(metadataManager.getTransactionInfoTable()).thenReturn(transactionInfoTable);
+    when(metadataManager.getSnapshotInfoTable()).thenReturn(snapshotInfoTable);
+
+    assertFalse(OmSnapshotManager.isSnapshotPurged(staleChain,
+        metadataManager, snapshotId, null));
+
+    TransactionInfo flushedTransaction = TransactionInfo.valueOf(1, 1);
+    when(transactionInfoTable.getSkipCache(TRANSACTION_INFO_KEY))
+        .thenReturn(flushedTransaction);
+    assertTrue(OmSnapshotManager.isSnapshotPurged(staleChain,
+        metadataManager, snapshotId, flushedTransaction));
+
+    SnapshotInfo snapshotInfo = createSnapshotInfo("vol", "buck");
+    String tableKey = snapshotInfo.getTableKey();
+    when(staleChain.getTableKey(snapshotId)).thenReturn(tableKey);
+    when(snapshotInfoTable.isExist(tableKey)).thenReturn(true);
+    assertFalse(OmSnapshotManager.isSnapshotPurged(staleChain,
+        metadataManager, snapshotId, flushedTransaction));
+
+    when(snapshotInfoTable.isExist(tableKey)).thenReturn(false);
+    assertTrue(OmSnapshotManager.isSnapshotPurged(staleChain,
+        metadataManager, snapshotId, flushedTransaction));
   }
 
   @Test

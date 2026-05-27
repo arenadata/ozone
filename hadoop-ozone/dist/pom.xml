@@ -17,10 +17,10 @@
   <parent>
     <groupId>org.apache.ozone</groupId>
     <artifactId>ozone</artifactId>
-    <version>2.1.0</version>
+    <version>2.1.0.1-4.3.0-0</version>
   </parent>
   <artifactId>ozone-dist</artifactId>
-  <version>2.1.0</version>
+  <version>2.1.0.1-4.3.0-0</version>
   <packaging>jar</packaging>
   <name>Apache Ozone Distribution</name>
   <properties>
@@ -271,11 +271,6 @@
         <dependency>
           <groupId>org.apache.ozone</groupId>
           <artifactId>ozone-filesystem-hadoop3</artifactId>
-          <scope>runtime</scope>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.ozone</groupId>
-          <artifactId>ozone-filesystem-hadoop3-client</artifactId>
           <scope>runtime</scope>
         </dependency>
       </dependencies>

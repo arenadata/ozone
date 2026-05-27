@@ -42,16 +42,21 @@ if [ "$1" != "${TITLE}" ]; then
   echo "${TITLE}"
 fi
 
-assertMatch    '^HDDS'                             'Fail: must start with HDDS'
-assertMatch    '^HDDS-'                            'Fail: missing dash in Jira'
-assertNotMatch '^HDDS-0'                           'Fail: leading zero in Jira'
-assertMatch    '^HDDS-[1-9][0-9]{0,4}[^0-9]'       'Fail: Jira must be 1 to 5 digits'
-assertMatch    '^HDDS-[1-9][0-9]{0,4}\.'           'Fail: missing dot after Jira'
-assertMatch    '^HDDS-[1-9][0-9]{0,4}\. '          'Fail: missing space after Jira'
+JIRA_PROJECT='[A-Z][A-Z0-9]+'
+JIRA_NUMBER='[1-9][0-9]{0,4}'
+JIRA_KEY="${JIRA_PROJECT}-${JIRA_NUMBER}"
+JIRA_SEPARATOR='[.:]'
+
+assertMatch    "^${JIRA_PROJECT}"                          'Fail: must start with uppercase Jira project key'
+assertMatch    "^${JIRA_PROJECT}-"                         'Fail: missing dash in Jira'
+assertNotMatch "^${JIRA_PROJECT}-0"                        'Fail: leading zero in Jira'
+assertMatch    "^${JIRA_KEY}[^0-9]"                        'Fail: Jira must be 1 to 5 digits'
+assertMatch    "^${JIRA_KEY}${JIRA_SEPARATOR}"             'Fail: missing dot or colon after Jira'
+assertMatch    "^${JIRA_KEY}${JIRA_SEPARATOR} "            'Fail: missing space after Jira'
 assertNotMatch '[[:space:]]$'                      'Fail: trailing space'
 assertNotMatch '\.{3,}$'                           'Fail: trailing ellipsis indicates title is cut'
 assertNotMatch '…$'                                'Fail: trailing ellipsis indicates title is cut'
 assertNotMatch '[[:space:]]{2}'                    'Fail: two consecutive spaces'
-assertMatch    '^HDDS-[1-9][0-9]{0,4}\. .*[^ ]$'   'Fail: not match "^HDDS-[1-9][0-9]{0,4}\. .*[^ ]$"'
+assertMatch    "^${JIRA_KEY}${JIRA_SEPARATOR} .*[^ ]$"      'Fail: not match "PROJECT-1234. Summary" or "PROJECT-1234: Summary"'
 
 echo 'OK'
