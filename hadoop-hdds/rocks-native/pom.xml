@@ -197,6 +197,8 @@
                   <url>https://github.com/facebook/rocksdb/archive/refs/tags/v${rocksdb.version}.tar.gz</url>
                   <outputFileName>rocksdb-v${rocksdb.version}.tar.gz</outputFileName>
                   <outputDirectory>${project.build.directory}/rocksdb</outputDirectory>
+                  <readTimeOut>60000</readTimeOut>
+                  <retries>5</retries>
                 </configuration>
               </execution>
             </executions>
