@@ -477,8 +477,9 @@ public class TestOzoneManagerPrepare extends TestOzoneManagerHA {
     clientProtocol.listVolumes(VOLUME, "", 100);
 
     // Submitting write request should fail.
+    String probeVolumeName = "vol-" + UUID.randomUUID();
     OMException omException = assertThrows(OMException.class,
-        () -> clientProtocol.createVolume("vol"));
+        () -> clientProtocol.createVolume(probeVolumeName));
     assertEquals(NOT_SUPPORTED_OPERATION_WHEN_PREPARED,
         omException.getResult());
   }
@@ -505,8 +506,9 @@ public class TestOzoneManagerPrepare extends TestOzoneManagerHA {
     clientProtocol.listVolumes(VOLUME, "", 100);
 
     // Submitting write request should also pass.
-    clientProtocol.createVolume("vol");
-    clientProtocol.deleteVolume("vol");
+    String probeVolumeName = "vol-" + UUID.randomUUID();
+    clientProtocol.createVolume(probeVolumeName);
+    clientProtocol.deleteVolume(probeVolumeName);
   }
 
   private void assertRatisLogsCleared() throws Exception {
