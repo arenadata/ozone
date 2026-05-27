@@ -548,6 +548,7 @@ class TestKeyDeletingService extends OzoneTestBase {
        of Snap3 should be empty.
      */
     @Test
+    @Flaky("HDDS-13880")
     void testSnapshotDeepClean() throws Exception {
       Table<String, SnapshotInfo> snapshotInfoTable =
           om.getMetadataManager().getSnapshotInfoTable();
@@ -619,6 +620,10 @@ class TestKeyDeletingService extends OzoneTestBase {
         assertTableRowCount(snap3deletedTable, initialDeletedCount + 10, metadataManager);
 
         writeClient.deleteSnapshot(volumeName, bucketName, snap2);
+        keyManager.getSnapshotDeletingService().runPeriodicalTaskNow();
+        directoryDeletingService.runPeriodicalTaskNow();
+        keyDeletingService.runPeriodicalTaskNow();
+        keyManager.getSnapshotDeletingService().runPeriodicalTaskNow();
         assertTableRowCount(snapshotInfoTable, initialSnapshotCount + 2, metadataManager);
 
         assertTableRowCount(snap3deletedTable, initialDeletedCount, metadataManager);
