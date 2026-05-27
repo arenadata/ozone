@@ -37,14 +37,16 @@ jobs:
   discover:
     runs-on: ubuntu-24.04
     outputs:
-      count: ${{ steps.find.outputs.count }}
-      matrix: ${{ steps.find.outputs.matrix }}
+      package_delete_count: ${{ steps.find.outputs.package_delete_count }}
+      package_delete_matrix: ${{ steps.find.outputs.package_delete_matrix }}
+      version_delete_count: ${{ steps.find.outputs.version_delete_count }}
+      version_delete_matrix: ${{ steps.find.outputs.version_delete_matrix }}
     env:
       GH_TOKEN: ${{ secrets.PACKAGES_DELETE_TOKEN || secrets.GITHUB_TOKEN }}
       OWNER_TYPE: ${{ github.event.repository.owner.type }}
       VERSION: ${{ inputs.version }}
     steps:
-      - name: Find package version ids
+      - name: Find package versions
         id: find
         shell: bash
         run: |
@@ -60,10 +62,12 @@ jobs:
             Organization)
               packages_endpoint="/orgs/${owner}/packages?package_type=${PACKAGE_TYPE}&per_page=100"
               versions_endpoint_prefix="/orgs/${owner}/packages/${PACKAGE_TYPE}"
+              package_endpoint_prefix="/orgs/${owner}/packages/${PACKAGE_TYPE}"
               ;;
             User)
               packages_endpoint="/users/${owner}/packages?package_type=${PACKAGE_TYPE}&per_page=100"
               versions_endpoint_prefix="/users/${owner}/packages/${PACKAGE_TYPE}"
+              package_endpoint_prefix="/users/${owner}/packages/${PACKAGE_TYPE}"
               ;;
             *)
               echo "::error::Unsupported repository owner type '${OWNER_TYPE}'."
@@ -71,8 +75,10 @@ jobs:
               ;;
           esac
 
-          matches="${RUNNER_TEMP}/package-version-matches.jsonl"
-          : > "${matches}"
+          package_delete_matches="${RUNNER_TEMP}/package-delete-matches.jsonl"
+          version_delete_matches="${RUNNER_TEMP}/version-delete-matches.jsonl"
+          : > "${package_delete_matches}"
+          : > "${version_delete_matches}"
 
           mapfile -t package_names < <(
             gh api --paginate "${packages_endpoint}" \
@@ -82,6 +88,10 @@ jobs:
 
           for package_name in "${package_names[@]}"; do
             encoded_package_name="$(jq -nr --arg value "${package_name}" '$value | @uri')"
+            mapfile -t package_versions < <(
+              gh api --paginate "${versions_endpoint_prefix}/${encoded_package_name}/versions?per_page=100" \
+                --jq '.[].name'
+            )
             mapfile -t version_ids < <(
               gh api --paginate "${versions_endpoint_prefix}/${encoded_package_name}/versions?per_page=100" \
                 --jq '.[] | select(.name == env.VERSION) | .node_id'
@@ -91,25 +101,41 @@ jobs:
               continue
             fi
 
+            if [[ "${#package_versions[@]}" -eq "${#version_ids[@]}" ]]; then
+              jq -cn \
+                --arg package_name "${package_name}" \
+                --arg package_endpoint "${package_endpoint_prefix}/${encoded_package_name}" \
+                '{package_name: $package_name, package_endpoint: $package_endpoint}' \
+                >> "${package_delete_matches}"
+              continue
+            fi
+
             package_version_ids="$(IFS=,; echo "${version_ids[*]}")"
             jq -cn \
               --arg package_name "${package_name}" \
               --arg package_version_ids "${package_version_ids}" \
               '{package_name: $package_name, package_version_ids: $package_version_ids}' \
-              >> "${matches}"
+              >> "${version_delete_matches}"
           done
 
-          matrix="$(jq -cs '{include: .}' "${matches}")"
-          count="$(jq '.include | length' <<< "${matrix}")"
+          package_delete_matrix="$(jq -cs '{include: .}' "${package_delete_matches}")"
+          version_delete_matrix="$(jq -cs '{include: .}' "${version_delete_matches}")"
+          package_delete_count="$(jq '.include | length' <<< "${package_delete_matrix}")"
+          version_delete_count="$(jq '.include | length' <<< "${version_delete_matrix}")"
+          total_count="$((package_delete_count + version_delete_count))"
 
           {
-            echo "matrix<<EOF"
-            echo "${matrix}"
+            echo "package_delete_matrix<<EOF"
+            echo "${package_delete_matrix}"
             echo "EOF"
-            echo "count=${count}"
+            echo "package_delete_count=${package_delete_count}"
+            echo "version_delete_matrix<<EOF"
+            echo "${version_delete_matrix}"
+            echo "EOF"
+            echo "version_delete_count=${version_delete_count}"
           } >> "${GITHUB_OUTPUT}"
 
-          if [[ "${count}" -eq 0 ]]; then
+          if [[ "${total_count}" -eq 0 ]]; then
             echo "::error::No ${PACKAGE_TYPE} package versions named '${VERSION}' found for prefix '${PACKAGE_PREFIX}'."
             exit 1
           fi
@@ -119,17 +145,20 @@ jobs:
             echo
             echo "| Package | Version |"
             echo "| --- | --- |"
-            jq -r --arg version "${VERSION}" '.include[] | "| `\(.package_name)` | `\($version)` |"' <<< "${matrix}"
+            jq -r --arg version "${VERSION}" '.include[] | "| `\(.package_name)` | `\($version)` |"' <<< "${version_delete_matrix}"
+            jq -r --arg version "${VERSION}" '.include[] | "| `\(.package_name)` | `\($version)` |"' <<< "${package_delete_matrix}"
+            echo
+            echo "Packages where `${VERSION}` is the last version will be deleted entirely."
           } >> "${GITHUB_STEP_SUMMARY}"
 
-  delete:
+  delete_versions:
     needs:
       - discover
     runs-on: ubuntu-24.04
-    if: needs.discover.outputs.count != '0'
+    if: needs.discover.outputs.version_delete_count != '0'
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.discover.outputs.matrix) }}
+      matrix: ${{ fromJSON(needs.discover.outputs.version_delete_matrix) }}
     steps:
       - name: Delete ${{ matrix.package_name }} ${{ inputs.version }}
         uses: actions/delete-package-versions@v5
@@ -139,3 +168,19 @@ jobs:
           package-type: maven
           package-version-ids: ${{ matrix.package_version_ids }}
           token: ${{ secrets.PACKAGES_DELETE_TOKEN || secrets.GITHUB_TOKEN }}
+
+  delete_packages:
+    needs:
+      - discover
+    runs-on: ubuntu-24.04
+    if: needs.discover.outputs.package_delete_count != '0'
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.discover.outputs.package_delete_matrix) }}
+    env:
+      GH_TOKEN: ${{ secrets.PACKAGES_DELETE_TOKEN || secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Delete package ${{ matrix.package_name }}
+        env:
+          PACKAGE_ENDPOINT: ${{ matrix.package_endpoint }}
+        run: gh api --method DELETE "${PACKAGE_ENDPOINT}"

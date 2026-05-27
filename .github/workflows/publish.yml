@@ -31,7 +31,7 @@ permissions:
 env:
   MAVEN_ARGS: --batch-mode --show-version --errors --no-transfer-progress --settings ${{ github.workspace }}/dev-support/ci/maven-settings.xml
   MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryHandler.class=standard -Dmaven.wagon.http.retryHandler.count=3
-  OZONE_DEPLOY_ARGS: -Pdist -Psrc -DskipTests -Dmaven.test.skip=true -DskipDocs -DskipRecon -Dmaven.javadoc.skip=true -Djacoco.skip -Drocks_tools_native -DdeployAtEnd=true
+  OZONE_DEPLOY_ARGS: -Pdist -Psrc -DskipTests -DskipDocs -DskipRecon -Dmaven.javadoc.skip=true -Djacoco.skip -Drocks_tools_native -DdeployAtEnd=true
 
 jobs:
   publish:
