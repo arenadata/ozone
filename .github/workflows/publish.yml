@@ -13,31 +13,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: CI
+name: Publish
 
 on:
   push:
-    branches:
-      - '**'
+    tags:
+      - '*'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: read
-  packages: read
+  packages: write
 
 env:
   MAVEN_ARGS: --batch-mode --show-version --errors --no-transfer-progress --settings ${{ github.workspace }}/dev-support/ci/maven-settings.xml
   MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryHandler.class=standard -Dmaven.wagon.http.retryHandler.count=3
-  OZONE_BUILD_ARGS: -Pdist -Psrc -Dmaven.javadoc.skip=true -Drocks_tools_native
-  OZONE_TEST_ARGS: -Drocks_tools_native
+  OZONE_DEPLOY_ARGS: -Pdist -Psrc -DskipTests -DskipDocs -DskipRecon -Dmaven.javadoc.skip=true -Djacoco.skip -Drocks_tools_native
 
 jobs:
-  build:
+  publish:
     runs-on: ubuntu-24.04
-    timeout-minutes: 90
+    timeout-minutes: 120
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
@@ -64,61 +63,5 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pnpm-
 
-      - name: Build
-        run: hadoop-ozone/dev-support/checks/build.sh ${{ env.OZONE_BUILD_ARGS }}
-
-      - name: Summarize build failures
-        if: failure()
-        run: |
-          if [[ -s target/build/summary.md ]]; then
-            cat target/build/summary.md >> "${GITHUB_STEP_SUMMARY}"
-          fi
-          hadoop-ozone/dev-support/checks/_summary.sh target/build/summary.txt
-
-      - name: Archive build report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-report
-          path: target/build
-          retention-days: 7
-
-  test:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 120
-    needs:
-      - build
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    steps:
-      - name: Checkout project
-        uses: actions/checkout@v4
-
-      - name: Setup JDK 21
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 21
-          cache: maven
-          server-id: arenadata
-          server-username: GITHUB_ACTOR
-          server-password: GITHUB_TOKEN
-
-      - name: Run unit tests
-        run: hadoop-ozone/dev-support/checks/unit.sh ${{ env.OZONE_TEST_ARGS }}
-
-      - name: Summarize test failures
-        if: failure()
-        run: |
-          if [[ -s target/unit/summary.md ]]; then
-            cat target/unit/summary.md >> "${GITHUB_STEP_SUMMARY}"
-          fi
-          hadoop-ozone/dev-support/checks/_summary.sh target/unit/summary.txt
-
-      - name: Archive test report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: unit-test-report
-          path: target/unit
-          retention-days: 7
+      - name: Build and publish
+        run: mvn ${{ env.MAVEN_ARGS }} clean deploy ${{ env.OZONE_DEPLOY_ARGS }}
