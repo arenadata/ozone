@@ -95,6 +95,12 @@ public abstract class TestOzoneManagerHA {
     return objectStore;
   }
 
+  protected static void refreshClient() throws IOException {
+    IOUtils.closeQuietly(client);
+    client = OzoneClientFactory.getRpcClient(omServiceId, conf);
+    objectStore = client.getObjectStore();
+  }
+
   public static OzoneClient getClient() {
     return client;
   }
@@ -176,8 +182,7 @@ public abstract class TestOzoneManagerHA {
 
     cluster = clusterBuilder.build();
     cluster.waitForClusterToBeReady();
-    client = OzoneClientFactory.getRpcClient(omServiceId, conf);
-    objectStore = client.getObjectStore();
+    refreshClient();
   }
 
   /**

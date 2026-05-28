@@ -96,6 +96,8 @@ public class TestOzoneManagerPrepare extends TestOzoneManagerHA {
 
     LOG.info("Waiting for OM leader election");
     waitForLeaderToBeReady();
+    refreshClient();
+    initInstanceVariables();
     submitCancelPrepareRequest();
     assertClusterNotPrepared();
   }

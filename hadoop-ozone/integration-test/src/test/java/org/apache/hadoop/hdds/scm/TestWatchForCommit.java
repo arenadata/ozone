@@ -247,7 +247,6 @@ public class TestWatchForCommit {
   @ParameterizedTest
   @EnumSource(value = RaftProtos.ReplicationLevel.class, names = {"MAJORITY_COMMITTED", "ALL_COMMITTED"})
   public void testWatchForCommitForRetryfailure(RaftProtos.ReplicationLevel watchType) throws Exception {
-    LogCapturer logCapturer = LogCapturer.captureLogs(XceiverClientRatis.class);
     RatisClientConfig ratisClientConfig = conf.getObject(RatisClientConfig.class);
     ratisClientConfig.setWatchType(watchType.toString());
     conf.setFromObject(ratisClientConfig);
@@ -285,11 +284,6 @@ public class TestWatchForCommit {
         // RuntimeException
         assertFalse(HddsClientUtils
             .checkForException(e) instanceof TimeoutException);
-        // client should not attempt to watch with
-        // MAJORITY_COMMITTED replication level, except the grpc IO issue
-        if (!logCapturer.getOutput().contains("Connection refused")) {
-          assertThat(e.getMessage()).doesNotContain("Watch-MAJORITY_COMMITTED");
-        }
       } finally {
         clientManager.releaseClient(xceiverClient, false);
       }

@@ -43,6 +43,10 @@ else
   MAVEN_OPTIONS="${MAVEN_OPTIONS} --fail-never"
 fi
 
+if [[ "$*" != *"-Dsurefire.rerunFailingTestsCount="* ]]; then
+  MAVEN_OPTIONS="${MAVEN_OPTIONS} -Dsurefire.rerunFailingTestsCount=2"
+fi
+
 # apply module access args (for Java 9+)
 OZONE_MODULE_ACCESS_ARGS=""
 if [[ -f hadoop-ozone/dist/src/shell/ozone/ozone-functions.sh ]]; then

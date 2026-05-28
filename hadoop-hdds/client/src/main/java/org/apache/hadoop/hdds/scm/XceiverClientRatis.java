@@ -319,7 +319,11 @@ public final class XceiverClientRatis extends XceiverClientSpi {
           // we can save one watch request round trip by using the CommitInfoProto
           // in the NotReplicatedException
           final Collection<CommitInfoProto> commitInfoProtoList = ((NotReplicatedException) nre).getCommitInfos();
-          replyFuture.complete(handleFailedAllCommit(index, commitInfoProtoList));
+          if (isMajorityCommitted(index, commitInfoProtoList)) {
+            replyFuture.complete(handleFailedAllCommit(index, commitInfoProtoList));
+          } else {
+            replyFuture.completeExceptionally(e);
+          }
         } else {
           getClient().async().watch(index, ReplicationLevel.MAJORITY_COMMITTED)
               .thenApply(reply -> handleFailedAllCommit(index, reply.getCommitInfos()))
@@ -331,6 +335,12 @@ public final class XceiverClientRatis extends XceiverClientSpi {
       return null;
     });
     return replyFuture;
+  }
+
+  private boolean isMajorityCommitted(long index, Collection<CommitInfoProto> commitInfoProtoList) {
+    return commitInfoProtoList.stream()
+        .filter(i -> i.getCommitIndex() >= index)
+        .count() >= majority;
   }
 
   private XceiverClientReply handleFailedAllCommit(long index, Collection<CommitInfoProto> commitInfoProtoList) {

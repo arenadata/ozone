@@ -42,6 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -53,6 +54,7 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.hdds.client.ReplicationConfig;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
+import org.apache.hadoop.hdds.conf.DatanodeRatisServerConfig;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
@@ -168,6 +170,12 @@ public class TestHDDSUpgrade {
         TimeUnit.MILLISECONDS);
     conf.setTimeDuration(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL, 500,
         TimeUnit.MILLISECONDS);
+    DatanodeRatisServerConfig ratisServerConfig =
+        conf.getObject(DatanodeRatisServerConfig.class);
+    // Keep failure-detection timeouts below the test's finalization deadline.
+    ratisServerConfig.setFollowerSlownessTimeout(Duration.ofSeconds(30));
+    ratisServerConfig.setNoLeaderTimeout(Duration.ofSeconds(30));
+    conf.setFromObject(ratisServerConfig);
 
     scmFinalizationExecutor = new InjectedUpgradeFinalizationExecutor<>();
     SCMConfigurator scmConfigurator = new SCMConfigurator();
