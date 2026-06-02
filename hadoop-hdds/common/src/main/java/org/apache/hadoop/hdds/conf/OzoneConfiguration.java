@@ -108,6 +108,13 @@ public class OzoneConfiguration extends Configuration implements MutableConfigur
 
   public OzoneConfiguration(Configuration conf) {
     super(conf);
+    setClassLoader(conf.getClassLoader());
+    if (!(conf instanceof OzoneConfiguration)) {
+      // Re-read site files so those keys keep priority over Ozone default resources.
+      addResource(conf);
+      addResource("core-site.xml");
+      addResource("ozone-site.xml");
+    }
   }
 
   public List<Property> readPropertyFromXml(URL url) throws JAXBException {

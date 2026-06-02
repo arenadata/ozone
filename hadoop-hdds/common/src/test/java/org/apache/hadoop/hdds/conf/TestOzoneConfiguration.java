@@ -22,6 +22,7 @@ import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_CLIENT_HANDLER_
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_DATANODE_HANDLER_COUNT_KEY;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_HANDLER_COUNT_DEFAULT;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_HANDLER_COUNT_KEY;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SECURITY_ENABLED_KEY;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -35,6 +36,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.net.URL;
+import java.net.URLClassLoader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.time.Duration;
@@ -304,6 +306,84 @@ public class TestOzoneConfiguration {
     assertEquals(val, configuration.get(key));
 
     assertNotEquals(val, new OzoneConfiguration().get(key));
+  }
+
+  @Test
+  public void testInstantiationWithCoreSiteOverridesOzoneDefaults(
+      @TempDir File tempDir) throws IOException {
+    Configuration configuration = new Configuration(true);
+
+    File coreSite = writeSecureCoreSite(tempDir);
+    configuration.addResource(new URL("file:///" + coreSite.getAbsolutePath()));
+
+    assertTrue(configuration.getBoolean(OZONE_SECURITY_ENABLED_KEY, false));
+
+    OzoneConfiguration ozoneConfiguration =
+        new OzoneConfiguration(configuration);
+    assertTrue(ozoneConfiguration.getBoolean(
+        OZONE_SECURITY_ENABLED_KEY, false));
+  }
+
+  @Test
+  public void testLegacyHadoopConfigurationCoreSiteOverridesOzoneDefaults(
+      @TempDir File tempDir) throws IOException {
+    Configuration configuration = new Configuration(true);
+
+    File coreSite = writeSecureCoreSite(tempDir);
+    configuration.addResource(new URL("file:///" + coreSite.getAbsolutePath()));
+
+    LegacyHadoopConfigurationSource source =
+        new LegacyHadoopConfigurationSource(configuration);
+    OzoneConfiguration ozoneConfiguration = OzoneConfiguration.of(source);
+    assertTrue(ozoneConfiguration.getBoolean(
+        OZONE_SECURITY_ENABLED_KEY, false));
+  }
+
+  @Test
+  public void testInstantiationLoadsCoreSiteFromInputClassLoader(
+      @TempDir File tempDir) throws IOException {
+    writeSecureCoreSite(tempDir);
+    Configuration configuration = new Configuration(false);
+
+    try (URLClassLoader classLoader = new URLClassLoader(
+        new URL[] {tempDir.toURI().toURL()}, getClass().getClassLoader())) {
+      configuration.setClassLoader(classLoader);
+
+      OzoneConfiguration ozoneConfiguration =
+          new OzoneConfiguration(configuration);
+      assertTrue(ozoneConfiguration.getBoolean(
+          OZONE_SECURITY_ENABLED_KEY, false));
+    }
+  }
+
+  @Test
+  public void testLegacyHadoopConfigurationLoadsCoreSiteFromInputClassLoader(
+      @TempDir File tempDir) throws IOException {
+    writeSecureCoreSite(tempDir);
+    Configuration configuration = new Configuration(false);
+
+    try (URLClassLoader classLoader = new URLClassLoader(
+        new URL[] {tempDir.toURI().toURL()}, getClass().getClassLoader())) {
+      configuration.setClassLoader(classLoader);
+      LegacyHadoopConfigurationSource source =
+          new LegacyHadoopConfigurationSource(configuration);
+
+      OzoneConfiguration ozoneConfiguration = OzoneConfiguration.of(source);
+      assertTrue(ozoneConfiguration.getBoolean(
+          OZONE_SECURITY_ENABLED_KEY, false));
+    }
+  }
+
+  private File writeSecureCoreSite(File tempDir) throws IOException {
+    File coreSite = new File(tempDir, "core-site.xml");
+    OutputStream coreSiteStream = Files.newOutputStream(coreSite.toPath());
+    try (BufferedWriter out = new BufferedWriter(new OutputStreamWriter(
+        coreSiteStream, StandardCharsets.UTF_8))) {
+      startConfig(out);
+      appendProperty(out, OZONE_SECURITY_ENABLED_KEY, "true");
+      endConfig(out);
+    }
+    return coreSite;
   }
 
   @Test
