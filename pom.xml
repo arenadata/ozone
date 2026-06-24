@@ -97,6 +97,9 @@
     <guava.version>33.5.0-jre</guava.version>
     <guice.version>6.0.0</guice.version>
     <hadoop-maven-plugins.version>3.4.2</hadoop-maven-plugins.version>
+    <!-- Acceptance tests use public Apache Hadoop Docker/source artifacts.
+         Downstream Hadoop Maven dependencies remain on hadoop.version. -->
+    <hadoop.acceptance.version>3.4.3</hadoop.acceptance.version>
     <!-- Arenadata Hadoop does not expose hadoop-kms tests classifier to CI. -->
     <hadoop.kms.tests.version>3.4.3</hadoop.kms.tests.version>
     <hadoop.version>3.4.3.1-4.3.0-1</hadoop.version>

@@ -67,8 +67,14 @@ _install_tool() {
 create_aws_dir() {
   if [[ "${CI:-}" == "true" ]]; then
     export OZONE_VOLUME_OWNER=1000 # uid (from ozone-runner image)
-    pushd hadoop-ozone/dist/target/ozone-*
-    sudo mkdir .aws && sudo chmod 777 .aws && sudo chown ${OZONE_VOLUME_OWNER} .aws
-    popd
+    local dist_dir="${DIST_DIR:-}"
+    if [[ -z "${dist_dir}" ]]; then
+      dist_dir="$(find hadoop-ozone/dist/target -maxdepth 1 -type d -name 'ozone-*' ! -name '*-src' | sort | head -n1)"
+    fi
+    if [[ -n "${dist_dir}" && -d "${dist_dir}" ]]; then
+      sudo mkdir -p "${dist_dir}/.aws"
+      sudo chmod 777 "${dist_dir}/.aws"
+      sudo chown "${OZONE_VOLUME_OWNER}" "${dist_dir}/.aws"
+    fi
   fi
 }

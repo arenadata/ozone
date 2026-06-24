@@ -28,11 +28,11 @@ if [[ -z "${HADOOP_TEST_IMAGES}" ]]; then
   # hadoop2 image is only available from Docker Hub
   HADOOP_TEST_IMAGES="${HADOOP_TEST_IMAGES} apache/hadoop:${hadoop2.version}"
   HADOOP_TEST_IMAGES="${HADOOP_TEST_IMAGES} ${HADOOP_IMAGE}:3.3.6"
-  HADOOP_TEST_IMAGES="${HADOOP_TEST_IMAGES} ${HADOOP_IMAGE}:${hadoop.version}${docker.hadoop.image.flavor}"
+  HADOOP_TEST_IMAGES="${HADOOP_TEST_IMAGES} ${HADOOP_IMAGE}:${hadoop.acceptance.version}${docker.hadoop.image.flavor}"
 fi
 
 export HADOOP_MAJOR_VERSION=3
-export HADOOP_TEST_IMAGE="${HADOOP_IMAGE}:${hadoop.version}"
+export HADOOP_TEST_IMAGE="${HADOOP_IMAGE}:${hadoop.acceptance.version}${docker.hadoop.image.flavor}"
 export OZONE_REPLICATION_FACTOR=3
 
 # shellcheck source=/dev/null

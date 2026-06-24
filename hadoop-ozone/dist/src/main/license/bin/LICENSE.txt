@@ -259,6 +259,7 @@ CDDL 1.1 + GPLv2 with classpath exception
    javax.servlet:javax.servlet-api
    javax.servlet.jsp:jsp-api
    javax.ws.rs:jsr311-api
+   javax.xml.bind:jaxb-api
    org.glassfish.jaxb:jaxb-runtime
    org.glassfish.jaxb:txw2
 

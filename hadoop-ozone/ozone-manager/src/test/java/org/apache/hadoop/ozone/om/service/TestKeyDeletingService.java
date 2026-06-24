@@ -1081,7 +1081,6 @@ class TestKeyDeletingService extends OzoneTestBase {
     // The actual byte size of protobuf messages depends on content.
     // A small value like 1KB or 2KB should ensure batching for ~10-20 keys.
     final int actualRatisLimitBytes = 1138;
-    final int testRatisLimitBytes = 1024; // 2 KB to encourage multiple batches, 90% of the actualRatisLimitBytes.
 
     // Create a fresh configuration for this test to control the Ratis limit
     OzoneConfiguration testConf = new OzoneConfiguration();
@@ -1091,7 +1090,7 @@ class TestKeyDeletingService extends OzoneTestBase {
     testConf.setTimeDuration(OZONE_BLOCK_DELETING_SERVICE_INTERVAL, 100, TimeUnit.MILLISECONDS);
     // Set the specific Ratis limit for this test
     testConf.setStorageSize(OMConfigKeys.OZONE_OM_RATIS_LOG_APPENDER_QUEUE_BYTE_LIMIT,
-        testRatisLimitBytes, StorageUnit.BYTES);
+        actualRatisLimitBytes, StorageUnit.BYTES);
     testConf.setQuietMode(false);
 
     ScmBlockLocationTestingClient testScmBlockTestingClient = new ScmBlockLocationTestingClient(null, null, 0);

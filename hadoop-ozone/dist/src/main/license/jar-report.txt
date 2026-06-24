@@ -139,6 +139,7 @@ share/ozone/lib/javax.el-api.jar
 share/ozone/lib/javax.inject.jar
 share/ozone/lib/javax.interceptor-api.jar
 share/ozone/lib/javax.servlet-api.jar
+share/ozone/lib/jaxb-api.jar
 share/ozone/lib/jaxb-runtime.jar
 share/ozone/lib/jcip-annotations.jar
 share/ozone/lib/jcl-over-slf4j.jar

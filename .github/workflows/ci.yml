@@ -12,113 +12,371 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-name: CI
-
+name: full-ci
 on:
-  push:
-    branches:
-      - '**'
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  workflow_call:
+    inputs:
+      ratis_args:
+        type: string
+        description: Version overrides from custom Ratis build
+        default: ''
+        required: false
+      ref:
+        type: string
+        description: Ozone ref (branch, tag or commit SHA)
+        default: ''
+        required: false
 
 permissions:
   contents: read
   packages: read
 
 env:
-  MAVEN_ARGS: --batch-mode --show-version --errors --no-transfer-progress --settings ${{ github.workspace }}/dev-support/ci/maven-settings.xml
+  BUILD_ARGS: "-Pdist -Psrc -Dmaven.javadoc.skip=true -Drocks_tools_native"
+  # Minimum required Java version for running Ozone is defined in pom.xml (javac.version).
+  TEST_JAVA_VERSION: 21 # JDK version used by CI build and tests; should match the JDK version in apache/ozone-runner image
+  # MAVEN_ARGS and MAVEN_OPTS are duplicated in check.yml, please keep in sync
+  MAVEN_ARGS: --batch-mode --settings ${{ github.workspace }}/dev-support/ci/maven-settings.xml
   MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryHandler.class=standard -Dmaven.wagon.http.retryHandler.count=3
-  OZONE_BUILD_ARGS: -Pdist -Psrc -Dmaven.javadoc.skip=true -Drocks_tools_native
-  OZONE_TEST_ARGS: -Drocks_tools_native
+  OZONE_WITH_COVERAGE: ${{ github.event_name == 'push' }}
 
 jobs:
-  build:
+  build-info:
     runs-on: ubuntu-24.04
-    timeout-minutes: 90
+    env:
+      GITHUB_CONTEXT: ${{ toJson(github) }}
+    outputs:
+      acceptance-suites: ${{ steps.acceptance-suites.outputs.suites }}
+      integration-suites: ${{ steps.integration-suites.outputs.suites }}
+      needs-basic-check: ${{ steps.categorize-basic-checks.outputs.needs-basic-check }}
+      basic-checks: ${{ steps.categorize-basic-checks.outputs.basic-checks }}
+      needs-build: ${{ steps.selective-checks.outputs.needs-build }}
+      needs-compile: ${{ steps.selective-checks.outputs.needs-compile }}
+      needs-compose-tests: ${{ steps.selective-checks.outputs.needs-compose-tests }}
+      needs-integration-tests: ${{ steps.selective-checks.outputs.needs-integration-tests }}
+      needs-kubernetes-tests: ${{ steps.selective-checks.outputs.needs-kubernetes-tests }}
+      sha: ${{ steps.get-sha.outputs.sha }}
+      # `env` context cannot be used when calling reusable workflow, so we need to convert these to `outputs`
+      build-args: ${{ env.BUILD_ARGS }}
+      java-version: ${{ env.TEST_JAVA_VERSION }}
+      with-coverage: ${{ env.OZONE_WITH_COVERAGE }}
+    steps:
+      - name: "Checkout ${{ github.ref }} / ${{ github.sha }} (push)"
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+        if: github.event_name  == 'push'
+      - name: "Checkout ${{ github.sha }} with its parent (pull request)"
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 2
+          persist-credentials: false
+        if: github.event_name  == 'pull_request'
+      - name: "Checkout ${{ inputs.ref }} given in workflow input (manual dispatch)"
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+        if: github.event_name  == 'workflow_dispatch'
+      - name: Get SHA of ${{ inputs.ref || github.ref }}
+        id: get-sha
+        run: |
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            sha="$(git rev-parse --verify HEAD)"
+          else
+            sha="${GITHUB_SHA}"
+          fi
+          echo "sha=$sha" >> $GITHUB_OUTPUT
+      - name: Selective checks
+        id: selective-checks
+        env:
+          PR_LABELS: "${{ toJSON(github.event.pull_request.labels.*.name) }}"
+          PR_DRAFT: "${{ github.event.pull_request.draft }}"
+        run: |
+          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
+            # Run selective checks
+            dev-support/ci/selective_ci_checks.sh "${GITHUB_SHA}"
+          else
+            # Run all checks
+            dev-support/ci/selective_ci_checks.sh
+          fi
+      - name: Acceptance suites
+        id: acceptance-suites
+        run: dev-support/ci/acceptance_suites.sh
+      - name: Integration suites
+        id: integration-suites
+        run: dev-support/ci/integration_suites.sh
+      - name: Categorize Basic Checks
+        id: categorize-basic-checks
+        env:
+          ALL_BASIC_CHECKS: "${{ steps.selective-checks.outputs.basic-checks }}"
+        run: dev-support/ci/categorize_basic_checks.sh
+
+  build:
+    needs:
+      - build-info
+    if: needs.build-info.outputs.needs-build == 'true' || needs.build-info.outputs.needs-integration-tests == 'true'
+    uses: ./.github/workflows/check.yml
+    with:
+      java-version: ${{ needs.build-info.outputs.java-version }}
+      needs-npm-cache: true
+      ratis-args: ${{ inputs.ratis_args }}
+      script: build
+      script-args: ${{ needs.build-info.outputs.build-args }}
+      sha: ${{ needs.build-info.outputs.sha }}
+      timeout-minutes: 60
+      with-coverage: ${{ fromJSON(needs.build-info.outputs.with-coverage) }}
+    secrets: inherit
+
+  compile:
+    needs:
+      - build-info
+      - build
+      - basic
+      - dependency
+      - license
+    if: needs.build-info.outputs.needs-compile == 'true'
+    strategy:
+      matrix:
+        include:
+          - java: 11
+            os: ubuntu-24.04
+            args: "-Pdist -DskipRecon -Dmaven.javadoc.failOnWarnings=true -Djavac.version=11"
+          - java: 17
+            os: ubuntu-24.04
+            args: "-Pdist -DskipRecon -Dmaven.javadoc.failOnWarnings=true -Djavac.version=17"
+          - java: 21
+            os: ubuntu-24.04
+            args: "-Pdist -DskipRecon -Dmaven.javadoc.failOnWarnings=true -Djavac.version=21"
+      fail-fast: false
+    uses: ./.github/workflows/check.yml
+    with:
+      java-version: ${{ matrix.java }}
+      needs-ozone-source-tarball: true
+      ratis-args: ${{ inputs.ratis_args }}
+      runner: ${{ matrix.os }}
+      script: compile
+      script-args: ${{ matrix.args }}
+      sha: ${{ needs.build-info.outputs.sha }}
+      split: ${{ matrix.java }}
+      timeout-minutes: 45
+      with-coverage: false
+    secrets: inherit
+
+  basic:
+    needs:
+      - build-info
+    if: needs.build-info.outputs.needs-basic-check == 'true'
+    uses: ./.github/workflows/check.yml
+    with:
+      checkout-fetch-depth: ${{ matrix.check != 'bats' && 1 || 0 }}
+      java-version: 11
+      needs-maven-cache: ${{ !contains('author,bats', matrix.check) }}
+      ratis-args: ${{ inputs.ratis_args }}
+      script: ${{ matrix.check }}
+      sha: ${{ needs.build-info.outputs.sha }}
+      timeout-minutes: 30
+    secrets: inherit
+    strategy:
+      matrix:
+        check: ${{ fromJson(needs.build-info.outputs.basic-checks) }}
+      fail-fast: false
+
+  dependency:
+    needs:
+      - build-info
+      - build
+    uses: ./.github/workflows/check.yml
+    secrets: inherit
+    with:
+      java-version: ${{ needs.build-info.outputs.java-version }}
+      needs-ozone-binary-tarball: true
+      script: dependency
+      sha: ${{ needs.build-info.outputs.sha }}
+      timeout-minutes: 5
+
+  license:
+    needs:
+      - build-info
+      - build
+    uses: ./.github/workflows/check.yml
+    secrets: inherit
+    with:
+      java-version: ${{ needs.build-info.outputs.java-version }}
+      needs-ozone-repo: true
+      script: license
+      sha: ${{ needs.build-info.outputs.sha }}
+      timeout-minutes: 15
+
+  javadoc:
+    needs:
+      - build-info
+      - build
+    uses: ./.github/workflows/check.yml
+    secrets: inherit
+    with:
+      java-version: ${{ needs.build-info.outputs.java-version }}
+      needs-ozone-repo: true
+      script: javadoc
+      sha: ${{ needs.build-info.outputs.sha }}
+      timeout-minutes: 30
+
+  repro:
+    needs:
+      - build-info
+      - build
+      - basic
+      - dependency
+      - license
+    uses: ./.github/workflows/check.yml
+    secrets: inherit
+    with:
+      java-version: ${{ needs.build-info.outputs.java-version }}
+      needs-ozone-repo: true
+      ratis-args: ${{ inputs.ratis_args }}
+      script: repro
+      script-args: ${{ needs.build-info.outputs.build-args }}
+      post-failure: hadoop-ozone/dev-support/checks/_diffoscope.sh
+      sha: ${{ needs.build-info.outputs.sha }}
+      timeout-minutes: 30
+      with-coverage: ${{ fromJSON(needs.build-info.outputs.with-coverage) }}
+
+  unit:
+    needs:
+      - build-info
+      - build
+    if: needs.build-info.outputs.needs-build == 'true' || needs.build-info.outputs.needs-integration-tests == 'true'
+    uses: ./.github/workflows/check.yml
+    secrets: inherit
+    with:
+      java-version: ${{ needs.build-info.outputs.java-version }}
+      ratis-args: ${{ inputs.ratis_args }}
+      script: unit
+      script-args: -Drocks_tools_native
+      sha: ${{ needs.build-info.outputs.sha }}
+      timeout-minutes: 120
+      with-coverage: ${{ fromJSON(needs.build-info.outputs.with-coverage) }}
+
+  acceptance:
+    needs:
+      - build-info
+      - build
+      - basic
+      - dependency
+      - license
+    if: needs.build-info.outputs.needs-compose-tests == 'true'
+    uses: ./.github/workflows/check.yml
+    secrets: inherit
+    with:
+      java-version: 11 # Hadoop may not work with newer Java
+      needs-ozone-binary-tarball: true
+      ratis-args: ${{ inputs.ratis_args }}
+      script: acceptance
+      script-args: ${{ matrix.suite }}
+      sha: ${{ needs.build-info.outputs.sha }}
+      split: ${{ matrix.suite }}
+      timeout-minutes: 150
+      with-coverage: ${{ fromJSON(needs.build-info.outputs.with-coverage) }}
+    strategy:
+      matrix:
+        suite: ${{ fromJson(needs.build-info.outputs.acceptance-suites) }}
+      fail-fast: false
+
+  kubernetes:
+    needs:
+      - build-info
+      - build
+      - basic
+      - dependency
+      - license
+    if: needs.build-info.outputs.needs-kubernetes-tests == 'true'
+    uses: ./.github/workflows/check.yml
+    secrets: inherit
+    with:
+      needs-ozone-binary-tarball: true
+      ratis-args: ${{ inputs.ratis_args }}
+      script: kubernetes
+      sha: ${{ needs.build-info.outputs.sha }}
+      timeout-minutes: 60
+      with-coverage: ${{ fromJSON(needs.build-info.outputs.with-coverage) }}
+
+  integration:
+    needs:
+      - build-info
+      - build
+      - basic
+      - dependency
+      - license
+    if: needs.build-info.outputs.needs-integration-tests == 'true'
+    uses: ./.github/workflows/check.yml
+    secrets: inherit
+    with:
+      java-version: ${{ needs.build-info.outputs.java-version }}
+      pre-script: sudo hostname localhost
+      ratis-args: ${{ inputs.ratis_args }}
+      script: integration
+      script-args: -Ptest-${{ matrix.profile }} -Drocks_tools_native
+      sha: ${{ needs.build-info.outputs.sha }}
+      split: ${{ matrix.profile }}
+      timeout-minutes: 90
+      with-coverage: ${{ fromJSON(needs.build-info.outputs.with-coverage) }}
+    strategy:
+      matrix:
+        profile: ${{ fromJson(needs.build-info.outputs.integration-suites) }}
+      fail-fast: false
+
+  coverage:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    if: github.event_name == 'push'
+    needs:
+      - build-info
+      - unit
+      - acceptance
+      - integration
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout project
         uses: actions/checkout@v4
-
-      - name: Setup JDK 21
-        uses: actions/setup-java@v4
         with:
-          distribution: temurin
-          java-version: 21
-          cache: maven
-          server-id: arenadata
-          server-username: GITHUB_ACTOR
-          server-password: GITHUB_TOKEN
-
-      - name: Cache NPM dependencies
-        uses: actions/cache@v4
+          fetch-depth: 0
+          ref: ${{ needs.build-info.outputs.sha }}
+      - name: Cache for maven dependencies
+        uses: actions/cache/restore@v4
         with:
           path: |
-            ~/.pnpm-store
-            **/node_modules
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+            ~/.m2/repository/*/*/*
+            !~/.m2/repository/org/apache/ozone
+          key: maven-repo-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            ${{ runner.os }}-pnpm-
-
-      - name: Build
-        run: hadoop-ozone/dev-support/checks/build.sh ${{ env.OZONE_BUILD_ARGS }}
-
-      - name: Summarize build failures
-        if: failure()
-        run: |
-          if [[ -s target/build/summary.md ]]; then
-            cat target/build/summary.md >> "${GITHUB_STEP_SUMMARY}"
-          fi
-          hadoop-ozone/dev-support/checks/_summary.sh target/build/summary.txt
-
-      - name: Archive build report
-        if: always()
-        uses: actions/upload-artifact@v4
+            maven-repo-
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
         with:
-          name: build-report
-          path: target/build
-          retention-days: 7
-
-  test:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 120
-    needs:
-      - build
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    steps:
-      - name: Checkout project
-        uses: actions/checkout@v4
-
-      - name: Setup JDK 21
+          path: target/artifacts
+      - name: Untar binaries
+        run: |
+          mkdir -p hadoop-ozone/dist/target
+          tar xzvf target/artifacts/ozone-bin/ozone*.tar.gz -C hadoop-ozone/dist/target
+      - name: Setup java ${{ env.TEST_JAVA_VERSION }}
         uses: actions/setup-java@v4
         with:
-          distribution: temurin
-          java-version: 21
-          cache: maven
-          server-id: arenadata
-          server-username: GITHUB_ACTOR
-          server-password: GITHUB_TOKEN
-
-      - name: Run unit tests
-        run: hadoop-ozone/dev-support/checks/unit.sh ${{ env.OZONE_TEST_ARGS }}
-
-      - name: Summarize test failures
-        if: failure()
-        run: |
-          if [[ -s target/unit/summary.md ]]; then
-            cat target/unit/summary.md >> "${GITHUB_STEP_SUMMARY}"
-          fi
-          hadoop-ozone/dev-support/checks/_summary.sh target/unit/summary.txt
-
-      - name: Archive test report
-        if: always()
+          distribution: 'temurin'
+          java-version: ${{ env.TEST_JAVA_VERSION }}
+      - name: Calculate combined coverage
+        run: ./hadoop-ozone/dev-support/checks/coverage.sh
+      - name: Upload coverage to Sonar
+        run: ./hadoop-ozone/dev-support/checks/sonar.sh
+        if: github.repository == 'apache/ozone'
+        env:
+          SONAR_TOKEN: ${{ secrets.SONARCLOUD_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+      - name: Archive build results
         uses: actions/upload-artifact@v4
         with:
-          name: unit-test-report
-          path: target/unit
-          retention-days: 7
+          name: coverage
+          path: target/coverage
+        continue-on-error: true
