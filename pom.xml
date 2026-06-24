@@ -66,7 +66,7 @@
     <commons-validator.version>1.10.0</commons-validator.version>
     <compile-testing.version>0.23.0</compile-testing.version>
     <copy-rename-maven-plugin.version>1.0.1</copy-rename-maven-plugin.version>
-    <curator.version>4.2.0</curator.version>
+    <curator.version>5.9.0.1-4.3.0-0</curator.version>
     <cyclonedx.version>2.9.1</cyclonedx.version>
     <!-- the version of Hadoop declared in the version resources; can be overridden
     so that Hadoop 3.x can declare itself a 2.x artifact. -->
@@ -108,7 +108,7 @@
     <httpclient.version>4.5.14</httpclient.version>
     <httpcore.version>4.4.16</httpcore.version>
     <io.grpc.version>1.77.1</io.grpc.version>
-    <jackson2-bom.version>2.16.2</jackson2-bom.version>
+    <jackson2-bom.version>2.18.6</jackson2-bom.version>
     <jacoco.version>0.8.13</jacoco.version>
     <jakarta.annotation.version>2.1.1</jakarta.annotation.version>
     <jakarta.inject.version>2.6.1</jakarta.inject.version>
@@ -198,8 +198,8 @@
     <properties.maven.plugin.version>1.2.1</properties.maven.plugin.version>
     <proto-backwards-compatibility.version>1.0.7</proto-backwards-compatibility.version>
     <protobuf-maven-plugin.version>0.6.1</protobuf-maven-plugin.version>
-    <protobuf.version>3.25.8</protobuf.version>
-    <ranger.version>2.6.0.4-2.2.0-1</ranger.version>
+    <protobuf.version>3.25.9</protobuf.version>
+    <ranger.version>2.6.0.7-2.2.0-2</ranger.version>
     <!-- versions included in ratis-thirdparty, update in sync -->
     <ratis-thirdparty.grpc.version>1.71.0</ratis-thirdparty.grpc.version>
     <ratis-thirdparty.netty.version>4.1.119.Final</ratis-thirdparty.netty.version>
@@ -237,8 +237,8 @@
     <vault.driver.version>5.1.0</vault.driver.version>
     <weld-servlet.version>3.1.9.Final</weld-servlet.version>
     <woodstox.version>5.4.0</woodstox.version>
-    <zookeeper.version>3.8.4</zookeeper.version>
-    <zstd-jni.version>1.5.7-5</zstd-jni.version>
+    <zookeeper.version>3.9.5.1-4.3.0-0</zookeeper.version>
+    <zstd-jni.version>1.5.7-7</zstd-jni.version>
   </properties>
 
   <dependencyManagement>
