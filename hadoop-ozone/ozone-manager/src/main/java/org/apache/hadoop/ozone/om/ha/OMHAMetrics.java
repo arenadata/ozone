@@ -109,7 +109,7 @@ public final class OMHAMetrics implements MetricsSource {
     MetricsRecordBuilder recordBuilder = collector.addRecord(SOURCE_NAME);
 
     // Check current node state (1 leader, 0 follower)
-    int state = currNodeId.equals(leaderId) ? 1 : 0;
+    int state = getOzoneManagerHALeaderState();
     omhaMetricsInfo.setNodeId(currNodeId);
     omhaMetricsInfo.setOzoneManagerHALeaderState(state);
 
@@ -122,11 +122,15 @@ public final class OMHAMetrics implements MetricsSource {
 
   @VisibleForTesting
   public String getOmhaInfoNodeId() {
-    return omhaMetricsInfo.getNodeId();
+    return currNodeId;
   }
 
   @VisibleForTesting
   public int getOmhaInfoOzoneManagerHALeaderState() {
-    return omhaMetricsInfo.getOzoneManagerHALeaderState();
+    return getOzoneManagerHALeaderState();
+  }
+
+  private int getOzoneManagerHALeaderState() {
+    return currNodeId.equals(leaderId) ? 1 : 0;
   }
 }
