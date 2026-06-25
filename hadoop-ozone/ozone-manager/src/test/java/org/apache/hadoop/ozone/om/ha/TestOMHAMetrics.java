@@ -55,4 +55,20 @@ public class TestOMHAMetrics {
     omhaMetrics.getMetrics(METRICS_COLLECTOR, true);
     assertEquals(0, omhaMetrics.getOmhaInfoOzoneManagerHALeaderState());
   }
+
+  @Test
+  public void testGettersDoNotDependOnMetricsCollection() {
+    OMHAMetrics leaderMetrics = OMHAMetrics.create(NODE_ID, NODE_ID);
+
+    assertEquals(NODE_ID, leaderMetrics.getOmhaInfoNodeId());
+    assertEquals(1, leaderMetrics.getOmhaInfoOzoneManagerHALeaderState());
+
+    OMHAMetrics.unRegister();
+
+    String leaderId = "om" + RandomStringUtils.secure().nextNumeric(5);
+    OMHAMetrics followerMetrics = OMHAMetrics.create(NODE_ID, leaderId);
+
+    assertEquals(NODE_ID, followerMetrics.getOmhaInfoNodeId());
+    assertEquals(0, followerMetrics.getOmhaInfoOzoneManagerHALeaderState());
+  }
 }

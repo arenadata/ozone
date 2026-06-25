@@ -16,7 +16,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.apache.ozone</groupId>
   <artifactId>ozone-main</artifactId>
-  <version>2.1.0.1-4.3.0-3</version>
+  <version>2.1.0.1-4.3.0-4</version>
   <packaging>pom</packaging>
   <name>Apache Ozone Main</name>
   <description>Apache Ozone Main</description>
@@ -41,7 +41,7 @@
     <aws-java-sdk.version>1.12.788</aws-java-sdk.version>
     <aws-java-sdk2.version>2.35.5</aws-java-sdk2.version>
     <bonecp.version>0.8.0.RELEASE</bonecp.version>
-    <bouncycastle.version>1.81</bouncycastle.version>
+    <bouncycastle.version>1.84</bouncycastle.version>
     <build-helper-maven-plugin.version>3.6.1</build-helper-maven-plugin.version>
     <caffeine.version>2.9.3</caffeine.version>
     <cdi-api.version>2.0</cdi-api.version>
@@ -66,7 +66,7 @@
     <commons-validator.version>1.10.0</commons-validator.version>
     <compile-testing.version>0.23.0</compile-testing.version>
     <copy-rename-maven-plugin.version>1.0.1</copy-rename-maven-plugin.version>
-    <curator.version>4.2.0</curator.version>
+    <curator.version>5.9.0.1-4.3.0-0</curator.version>
     <cyclonedx.version>2.9.1</cyclonedx.version>
     <!-- the version of Hadoop declared in the version resources; can be overridden
     so that Hadoop 3.x can declare itself a 2.x artifact. -->
@@ -97,6 +97,9 @@
     <guava.version>33.5.0-jre</guava.version>
     <guice.version>6.0.0</guice.version>
     <hadoop-maven-plugins.version>3.4.2</hadoop-maven-plugins.version>
+    <!-- Acceptance tests use public Apache Hadoop Docker/source artifacts.
+         Downstream Hadoop Maven dependencies remain on hadoop.version. -->
+    <hadoop.acceptance.version>3.4.3</hadoop.acceptance.version>
     <!-- Arenadata Hadoop does not expose hadoop-kms tests classifier to CI. -->
     <hadoop.kms.tests.version>3.4.3</hadoop.kms.tests.version>
     <hadoop.version>3.4.3.1-4.3.0-1</hadoop.version>
@@ -107,8 +110,8 @@
     <hk2.version>2.6.1</hk2.version>
     <httpclient.version>4.5.14</httpclient.version>
     <httpcore.version>4.4.16</httpcore.version>
-    <io.grpc.version>1.71.0</io.grpc.version>
-    <jackson2-bom.version>2.16.2</jackson2-bom.version>
+    <io.grpc.version>1.77.1</io.grpc.version>
+    <jackson2-bom.version>2.18.6</jackson2-bom.version>
     <jacoco.version>0.8.13</jacoco.version>
     <jakarta.annotation.version>2.1.1</jakarta.annotation.version>
     <jakarta.inject.version>2.6.1</jakarta.inject.version>
@@ -141,7 +144,7 @@
     <kerby.version>1.0.1</kerby.version>
     <kotlin.version>1.9.25</kotlin.version>
     <license-maven-plugin.version>2.7.0</license-maven-plugin.version>
-    <log4j2.version>2.25.0</log4j2.version>
+    <log4j2.version>2.25.3</log4j2.version>
     <make-maven-plugin.version>1.0-beta-1</make-maven-plugin.version>
     <maven-antrun-plugin.version>3.1.0</maven-antrun-plugin.version>
     <maven-assembly-plugin.version>3.7.1</maven-assembly-plugin.version>
@@ -159,7 +162,7 @@
     <maven-remote-resources-plugin.version>3.3.0</maven-remote-resources-plugin.version>
     <maven-replacer-plugin.version>1.5.3</maven-replacer-plugin.version>
     <maven-resources-plugin.version>3.3.0</maven-resources-plugin.version>
-    <maven-shade-plugin.version>3.6.0</maven-shade-plugin.version>
+    <maven-shade-plugin.version>3.6.1</maven-shade-plugin.version>
     <maven-site-plugin.version>3.21.0</maven-site-plugin.version>
     <maven-source-plugin.version>3.3.1</maven-source-plugin.version>
     <maven-surefire-plugin.argLine>-Xmx8192m -XX:+HeapDumpOnOutOfMemoryError</maven-surefire-plugin.argLine>
@@ -176,7 +179,7 @@
     <native.lib.tmp.dir />
     <!-- Use netty version known to work with grpc-netty. See table: -->
     <!-- https://github.com/grpc/grpc-java/blob/master/SECURITY.md#netty -->
-    <netty.version>4.1.119.Final</netty.version>
+    <netty.version>4.1.133.Final</netty.version>
     <!-- Node.js version number (without the v prefix required by frontend-maven-plugin) -->
     <nodejs.version>16.14.2</nodejs.version>
     <okhttp3.version>4.12.0</okhttp3.version>
@@ -185,7 +188,7 @@
     <ozone.release>Joshua Tree</ozone.release>
     <ozone.shaded.native.prefix>org_apache_ozone_shaded</ozone.shaded.native.prefix>
     <ozone.shaded.prefix>org.apache.ozone.shaded</ozone.shaded.prefix>
-    <ozone.version>2.1.0.1-4.3.0-3</ozone.version>
+    <ozone.version>2.1.0.1-4.3.0-4</ozone.version>
     <picocli.version>4.7.7</picocli.version>
     <plexus-archiver.version>4.2.2</plexus-archiver.version>
     <pmd.version>3.26.0</pmd.version>
@@ -198,8 +201,8 @@
     <properties.maven.plugin.version>1.2.1</properties.maven.plugin.version>
     <proto-backwards-compatibility.version>1.0.7</proto-backwards-compatibility.version>
     <protobuf-maven-plugin.version>0.6.1</protobuf-maven-plugin.version>
-    <protobuf.version>3.25.8</protobuf.version>
-    <ranger.version>2.6.0.4-2.2.0-1</ranger.version>
+    <protobuf.version>3.25.9</protobuf.version>
+    <ranger.version>2.6.0.7-2.2.0-2</ranger.version>
     <!-- versions included in ratis-thirdparty, update in sync -->
     <ratis-thirdparty.grpc.version>1.71.0</ratis-thirdparty.grpc.version>
     <ratis-thirdparty.netty.version>4.1.119.Final</ratis-thirdparty.netty.version>
@@ -237,8 +240,8 @@
     <vault.driver.version>5.1.0</vault.driver.version>
     <weld-servlet.version>3.1.9.Final</weld-servlet.version>
     <woodstox.version>5.4.0</woodstox.version>
-    <zookeeper.version>3.8.4</zookeeper.version>
-    <zstd-jni.version>1.5.7-5</zstd-jni.version>
+    <zookeeper.version>3.9.5.1-4.3.0-0</zookeeper.version>
+    <zstd-jni.version>1.5.7-7</zstd-jni.version>
   </properties>
 
   <dependencyManagement>

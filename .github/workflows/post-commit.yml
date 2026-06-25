@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
@@ -13,39 +12,21 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+name: build-branch
+on:
+  pull_request:
+    types: [opened, ready_for_review, synchronize]
+  push:
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-# This script installs Hugo.
-# Requires _install_tool from _lib.sh.  Use `source` for both scripts, because it modifies $PATH.
+permissions:
+  contents: read
+  packages: read
 
-: ${HUGO_VERSION:=0.152.2}
-
-_install_hugo() {
-  local os=$(uname -s)
-  local arch=$(uname -m)
-
-  mkdir bin
-
-  case "${arch}" in
-    x86_64)
-      arch=amd64
-      ;;
-    aarch64)
-      arch=arm64
-      ;;
-  esac
-
-  case "${os}" in
-    Darwin)
-      os=darwin
-      arch=universal
-      ;;
-    Linux)
-      os=linux
-      ;;
-  esac
-
-  curl -LSs "https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_${HUGO_VERSION}_${os}-${arch}.tar.gz" | tar -xz -f - -C bin hugo
-  chmod +x bin/hugo
-}
-
-_install_tool hugo bin
+jobs:
+  CI:
+    if: github.event_name == 'pull_request' || !startsWith(github.ref_name, 'dependabot')
+    uses: ./.github/workflows/ci.yml
+    secrets: inherit

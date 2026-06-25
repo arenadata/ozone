@@ -70,7 +70,6 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.log4j.Logger;
 import org.apache.ozone.test.GenericTestUtils;
-import org.apache.ozone.test.tag.Flaky;
 import org.apache.ratis.client.RaftClient;
 import org.apache.ratis.conf.RaftProperties;
 import org.apache.ratis.protocol.ClientId;
@@ -501,7 +500,6 @@ public class TestOzoneManagerHAWithStoppedNodes extends TestOzoneManagerHA {
         omFailoverProxyProvider.getWaitTime());
   }
 
-  @Flaky("HDDS-11353")
   @Test
   void testOMHAMetrics() throws Exception {
     // Get leader OM
@@ -512,7 +510,7 @@ public class TestOzoneManagerHAWithStoppedNodes extends TestOzoneManagerHA {
     // Get a list of all OMs
     List<OzoneManager> omList = getCluster().getOzoneManagersList();
     // Check metrics for all OMs
-    checkOMHAMetricsForAllOMs(omList, leaderOMId);
+    waitForOMHAMetricsForAllOMs(omList, leaderOMId);
 
     // Restart leader OM
     getCluster().shutdownOzoneManager(leaderOM);
@@ -524,19 +522,33 @@ public class TestOzoneManagerHAWithStoppedNodes extends TestOzoneManagerHA {
     String newLeaderOMId = newLeaderOM.getOMNodeId();
     // Get a list of all OMs again
     omList = getCluster().getOzoneManagersList();
-    // New state for the old leader
-    int newState = leaderOMId.equals(newLeaderOMId) ? 1 : 0;
-
-    // Get old leader
-    OzoneManager oldLeader = getCluster().getOzoneManager(leaderOMId);
-    // Get old leader's metrics
-    OMHAMetrics omhaMetrics = oldLeader.getOmhaMetrics();
-
-    assertEquals(newState,
-        omhaMetrics.getOmhaInfoOzoneManagerHALeaderState());
 
     // Check that metrics for all OMs have been updated
-    checkOMHAMetricsForAllOMs(omList, newLeaderOMId);
+    waitForOMHAMetricsForAllOMs(omList, newLeaderOMId);
+  }
+
+  private void waitForOMHAMetricsForAllOMs(List<OzoneManager> omList,
+      String leaderOMId) throws Exception {
+    GenericTestUtils.waitFor(
+        () -> areOMHAMetricsUpdatedForAllOMs(omList, leaderOMId),
+        100, 30000);
+    checkOMHAMetricsForAllOMs(omList, leaderOMId);
+  }
+
+  private boolean areOMHAMetricsUpdatedForAllOMs(List<OzoneManager> omList,
+      String leaderOMId) {
+    for (OzoneManager om : omList) {
+      OMHAMetrics omhaMetrics = om.getOmhaMetrics();
+      String nodeId = om.getOMNodeId();
+      int expectedState = nodeId.equals(leaderOMId) ? 1 : 0;
+      if (omhaMetrics == null
+          || !nodeId.equals(omhaMetrics.getOmhaInfoNodeId())
+          || expectedState
+              != omhaMetrics.getOmhaInfoOzoneManagerHALeaderState()) {
+        return false;
+      }
+    }
+    return true;
   }
 
   private void checkOMHAMetricsForAllOMs(List<OzoneManager> omList,

@@ -99,7 +99,7 @@ For large feature development changes, we use a process called "Ozone Enhancemen
 We use GitHub pull requests for contributing changes to the repository. The main workflow is as follows:
 
   1. Fork [`apache/ozone`](https://github.com/apache/ozone) repository (first time) and clone it to your local machine
-  2. Enable the `CI` GitHub Actions workflow (defined in `.github/workflows/ci.yml`) in your fork
+  2. Enable the `build-branch` GitHub Actions workflow (defined in `.github/workflows/post-commit.yml`) in your fork
   3. Ensure a Jira issue corresponding to the change exists in the [HDDS project](https://issues.apache.org/jira/projects/HDDS/) (eg. HDDS-1234)
      * Please search Jira before creating a new issue, someone might have already reported the same.
      * If this is your first issue, you might not be able to assign it to yourself.  If so, please make a comment in the issue, indicating that your are working on it.
@@ -107,7 +107,7 @@ We use GitHub pull requests for contributing changes to the repository. The main
   5. Make your changes locally.
      * For complex changes, committing each logical part is recommended.
   6. Push your changes to your fork of Ozone
-  7. Wait for the `CI` workflow to complete successfully for your commit.
+  7. Wait for the `build-branch` workflow to complete successfully for your commit.
   8. Create a pull request for your changes
      * Please include the Jira link, problem description and testing instruction (follow the [template](https://github.com/apache/ozone/blob/master/.github/pull_request_template.md))
   9. Set the Jira issue to "Patch Available" state

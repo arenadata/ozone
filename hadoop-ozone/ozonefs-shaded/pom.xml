@@ -17,10 +17,10 @@
   <parent>
     <groupId>org.apache.ozone</groupId>
     <artifactId>ozone</artifactId>
-    <version>2.1.0.1-4.3.0-3</version>
+    <version>2.1.0.1-4.3.0-4</version>
   </parent>
   <artifactId>ozone-filesystem-shaded</artifactId>
-  <version>2.1.0.1-4.3.0-3</version>
+  <version>2.1.0.1-4.3.0-4</version>
   <packaging>jar</packaging>
   <name>Apache Ozone FileSystem Shaded</name>
 
@@ -180,10 +180,9 @@
               <transformers>
                 <transformer implementation="org.apache.maven.plugins.shade.resource.DontIncludeResourceTransformer">
                   <resources>
-                    <resource>META-INF/BC1024KE.DSA</resource>
-                    <resource>META-INF/BC2048KE.DSA</resource>
-                    <resource>META-INF/BC1024KE.SF</resource>
-                    <resource>META-INF/BC2048KE.SF</resource>
+                    <resource>.DSA</resource>
+                    <resource>.RSA</resource>
+                    <resource>.SF</resource>
                   </resources>
                 </transformer>
                 <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />

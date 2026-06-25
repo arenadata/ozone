@@ -51,7 +51,7 @@ if [[ "${OZONE_ACCEPTANCE_SUITE}" == "s3a" ]]; then
   OZONE_ACCEPTANCE_TEST_TYPE="maven"
 
   if [[ -z "${HADOOP_AWS_DIR}" ]]; then
-    hadoop_version=$(mvn help:evaluate -Dexpression=hadoop.version -q -DforceStdout -Dscan=false)
+    hadoop_version=$(mvn help:evaluate -Dexpression=hadoop.acceptance.version -q -DforceStdout -Dscan=false)
     export HADOOP_AWS_DIR=${OZONE_ROOT}/target/hadoop-src
   fi
 
