@@ -19,6 +19,7 @@ package org.apache.hadoop.fs.ozone;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
 import org.apache.hadoop.fs.Syncable;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
@@ -51,6 +52,29 @@ public class OzoneFSOutputStream extends OutputStream
           TracingUtil.getActiveSpan().setAttribute("length", len);
           outputStream.write(b, off, len);
         });
+  }
+
+  /**
+   * Writes all of the remaining bytes of {@code buf} (from its current position
+   * up to its limit) and advances the buffer's position to its limit, per the
+   * {@code org.apache.hadoop.fs.ByteBufferWritable} contract. When {@code buf}
+   * is a direct buffer and the underlying key stream supports it, the bytes are
+   * routed down without first being copied onto the Java heap.
+   *
+   * <p>Declared here (rather than by implementing {@code ByteBufferWritable})
+   * so that this class keeps loading under the Hadoop 2 profile, where that
+   * interface is absent; the capability is exposed by
+   * {@code CapableOzoneFSOutputStream} which is only used under Hadoop 3.
+   */
+  public void write(ByteBuffer buf) throws IOException {
+    final int off = buf.position();
+    final int len = buf.remaining();
+    TracingUtil.executeInNewSpan("OzoneFSOutputStream.write",
+        () -> {
+          TracingUtil.getActiveSpan().setAttribute("length", len);
+          outputStream.write(buf, off, len);
+        });
+    buf.position(buf.limit());
   }
 
   @Override

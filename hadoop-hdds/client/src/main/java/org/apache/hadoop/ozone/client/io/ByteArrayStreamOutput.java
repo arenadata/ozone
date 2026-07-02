@@ -40,7 +40,9 @@ public abstract class ByteArrayStreamOutput extends OutputStream
     }
 
     if (buffer.hasArray()) {
-      write(buffer.array(), off, len);
+      // off is a logical position within the buffer; translate it to an index
+      // into the backing array (arrayOffset is non-zero e.g. for sliced buffers).
+      write(buffer.array(), buffer.arrayOffset() + off, len);
     } else {
       final byte[] array = new byte[Math.min(ARRAY_SIZE_LIMIT, len)];
       for (; len > 0;) {

@@ -61,7 +61,7 @@ public class TestKeyOutputStream {
     doAnswer(invocation -> {
       countWrite.getAndIncrement();
       return invocation.callRealMethod();
-    }).when(keyOutputStream).write(any(), anyInt(), anyInt());
+    }).when(keyOutputStream).write(any(byte[].class), anyInt(), anyInt());
 
     final ConcurrentHashMap<Long, CountDownLatch> mapNotifiers = new ConcurrentHashMap<>();
 

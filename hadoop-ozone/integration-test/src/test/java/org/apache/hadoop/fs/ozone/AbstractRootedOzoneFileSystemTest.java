@@ -55,6 +55,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.security.PrivilegedExceptionAction;
@@ -332,6 +333,37 @@ abstract class AbstractRootedOzoneFileSystemTest {
         key.getReplicationConfig().getReplicationType());
     assertEquals("rs-3-2-1024k",
         key.getReplicationConfig().getReplication());
+  }
+
+  @Test
+  void testWriteWithByteBuffer() throws Exception {
+    Path file = new Path(bucketPath, "testWriteWithByteBuffer");
+    // Size deliberately spans multiple chunks/buffers and is not a round
+    // multiple, to exercise the chunk-boundary loop of the ByteBuffer path.
+    byte[] data = RandomUtils.secure().randomBytes(2 * 1024 * 1024 + 137);
+    int half = data.length / 2;
+
+    try (FSDataOutputStream out = fs.create(file, true)) {
+      assertTrue(out.hasCapability(StreamCapabilities.WRITEBYTEBUFFER),
+          "replicated OFS output stream should advertise "
+              + StreamCapabilities.WRITEBYTEBUFFER);
+
+      // First half through a direct (off-heap) buffer: the zero-copy path.
+      ByteBuffer direct = ByteBuffer.allocateDirect(half);
+      direct.put(data, 0, half).flip();
+      out.write(direct);
+      assertEquals(0, direct.remaining(), "whole direct buffer must be consumed");
+
+      // Second half through a heap buffer starting at a non-zero position.
+      ByteBuffer heap = ByteBuffer.allocate(data.length);
+      heap.put(data).position(half);
+      out.write(heap);
+      assertEquals(data.length, heap.position(), "position must advance to limit");
+    }
+
+    byte[] readBack = ContractTestUtils.readDataset(fs, file, data.length);
+    assertArrayEquals(data, readBack);
+    assertTrue(fs.delete(file, false));
   }
 
   @Test

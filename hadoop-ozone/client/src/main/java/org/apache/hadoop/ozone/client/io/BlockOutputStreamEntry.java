@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.client.io;
 import com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.concurrent.ExecutorService;
@@ -181,6 +182,12 @@ public class BlockOutputStreamEntry extends OutputStream {
   public void write(byte[] b, int off, int len) throws IOException {
     checkStream();
     getOutputStream().write(b, off, len);
+    incCurrentPosition(len);
+  }
+
+  void write(ByteBuffer b, int off, int len) throws IOException {
+    checkStream();
+    outputStream.write(b, off, len);
     incCurrentPosition(len);
   }
 

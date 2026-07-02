@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone.client.io;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -91,6 +92,20 @@ public class OzoneOutputStream extends ByteArrayStreamOutput
   @Override
   public void write(byte[] b, int off, int len) throws IOException {
     outputStream.write(b, off, len);
+  }
+
+  @Override
+  public void write(ByteBuffer buffer, int off, int len) throws IOException {
+    // The direct ByteBuffer write path only applies to a plain replicated key.
+    // Encryption (CryptoOutputStream / CipherOutputStreamOzone) needs the
+    // plaintext on the heap first, and EC uses a different striping path, so
+    // both fall back to the byte[] path in ByteArrayStreamOutput.
+    if (outputStream instanceof KeyOutputStream
+        && !(outputStream instanceof ECKeyOutputStream)) {
+      ((KeyOutputStream) outputStream).write(buffer, off, len);
+    } else {
+      super.write(buffer, off, len);
+    }
   }
 
   @Override

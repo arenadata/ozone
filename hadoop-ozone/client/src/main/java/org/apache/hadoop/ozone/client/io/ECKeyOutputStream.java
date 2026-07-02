@@ -35,6 +35,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.fs.FSExceptionMessages;
+import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.hdds.client.ECReplicationConfig;
 import org.apache.hadoop.hdds.scm.OzoneClientConfig;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
@@ -156,6 +157,28 @@ public final class ECKeyOutputStream extends KeyOutputStream
       throw e;
     }
     writeOffset += len;
+  }
+
+  /**
+   * EC striping does not support the direct ByteBuffer write path; drain the
+   * buffer through the byte[] path. Also see {@link #hasCapability(String)},
+   * which refuses {@code WRITEBYTEBUFFER} so a wrapping CryptoOutputStream never
+   * forwards a ciphertext buffer here.
+   */
+  @Override
+  public void write(ByteBuffer buf) throws IOException {
+    final int len = buf.remaining();
+    final byte[] tmp = new byte[len];
+    buf.get(tmp);
+    write(tmp, 0, len);
+  }
+
+  @Override
+  public boolean hasCapability(String capability) {
+    if (StreamCapabilities.WRITEBYTEBUFFER.equalsIgnoreCase(capability)) {
+      return false;
+    }
+    return super.hasCapability(capability);
   }
 
   private void rollbackAndReset(ECChunkBuffers stripe) throws IOException {

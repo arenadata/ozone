@@ -22,6 +22,7 @@ import com.google.common.base.Preconditions;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -33,7 +34,9 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import org.apache.hadoop.fs.ByteBufferWritable;
 import org.apache.hadoop.fs.FSExceptionMessages;
+import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Syncable;
 import org.apache.hadoop.hdds.client.ReplicationConfig;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -73,7 +76,7 @@ import org.slf4j.LoggerFactory;
  * TODO : currently not support multi-thread access.
  */
 public class KeyOutputStream extends OutputStream
-    implements Syncable, KeyMetadataAware {
+    implements Syncable, KeyMetadataAware, ByteBufferWritable, StreamCapabilities {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(KeyOutputStream.class);
@@ -245,6 +248,58 @@ public class KeyOutputStream extends OutputStream
     }
   }
 
+  /**
+   * Writes {@code len} bytes starting at absolute position {@code off} of the
+   * given {@link ByteBuffer}, mirroring {@link #write(byte[], int, int)} but
+   * routing the buffer down to the block layer without an intermediate heap
+   * copy. The caller's buffer position and limit are left unchanged.
+   */
+  public void write(ByteBuffer b, int off, int len) throws IOException {
+    try {
+      getRequestSemaphore().acquire();
+      checkNotClosed();
+      if (b == null) {
+        throw new NullPointerException();
+      }
+      if ((off < 0) || (off > b.capacity()) || (len < 0)
+          || ((off + len) > b.capacity()) || ((off + len) < 0)) {
+        throw new IndexOutOfBoundsException();
+      }
+      if (len == 0) {
+        return;
+      }
+
+      doInWriteLock(() -> {
+        doWrite((entry, o, writeLen) -> entry.write(b, o, writeLen),
+            off, len, false);
+        writeOffset += len;
+      });
+    } finally {
+      getRequestSemaphore().release();
+    }
+  }
+
+  /**
+   * {@link ByteBufferWritable} entry point. Writes all remaining bytes of
+   * {@code buf} and advances its position to its limit. Lets a wrapping
+   * {@link org.apache.hadoop.crypto.CryptoOutputStream} hand its direct
+   * ciphertext buffer straight down without a heap copy.
+   */
+  @Override
+  public void write(ByteBuffer buf) throws IOException {
+    final int off = buf.position();
+    final int len = buf.remaining();
+    write(buf, off, len);
+    buf.position(buf.limit());
+  }
+
+  @Override
+  public boolean hasCapability(String capability) {
+    return StreamCapabilities.WRITEBYTEBUFFER.equalsIgnoreCase(capability)
+        || StreamCapabilities.HFLUSH.equalsIgnoreCase(capability)
+        || StreamCapabilities.HSYNC.equalsIgnoreCase(capability);
+  }
+
   private <E extends Throwable> void doInWriteLock(CheckedRunnable<E> block) throws E {
     writeLock.lock();
     try {
@@ -256,6 +311,25 @@ public class KeyOutputStream extends OutputStream
 
   @VisibleForTesting
   void handleWrite(byte[] b, int off, long len, boolean retry)
+      throws IOException {
+    doWrite((entry, o, writeLen) -> entry.write(b, o, writeLen), off, len,
+        retry);
+  }
+
+  /**
+   * Writes a chunk of a data source into a {@link BlockOutputStreamEntry}.
+   * The source (byte[] or {@link ByteBuffer}) is captured by the implementation
+   * so that the block-allocation, retry and exception bookkeeping below stays
+   * source-agnostic. Not invoked on the retry path, which replays from the
+   * block's own buffered data.
+   */
+  @FunctionalInterface
+  private interface ChunkWriter {
+    void write(BlockOutputStreamEntry entry, int off, int writeLen)
+        throws IOException;
+  }
+
+  private void doWrite(ChunkWriter writer, int off, long len, boolean retry)
       throws IOException {
     while (len > 0) {
       try {
@@ -271,8 +345,8 @@ public class KeyOutputStream extends OutputStream
         // or if it sees an exception, how much the actual write was
         // acknowledged.
         int writtenLength =
-                writeToOutputStream(current, retry, len, b, expectedWriteLen,
-                off, currentPos);
+                writeToOutputStream(current, retry, len, writer,
+                expectedWriteLen, off, currentPos);
         if (current.getRemaining() <= 0) {
           // since the current block is already written close the stream.
           handleFlushOrClose(StreamAction.FULL);
@@ -287,15 +361,15 @@ public class KeyOutputStream extends OutputStream
   }
 
   private int writeToOutputStream(BlockOutputStreamEntry current,
-      boolean retry, long len, byte[] b, int writeLen, int off, long currentPos)
-      throws IOException {
+      boolean retry, long len, ChunkWriter writer, int writeLen, int off,
+      long currentPos) throws IOException {
     try {
       current.registerCallReceived();
       if (retry) {
         current.writeOnRetry(len);
       } else {
         current.waitForRetryHandling(retryHandlingCondition);
-        current.write(b, off, writeLen);
+        writer.write(current, off, writeLen);
         offset += writeLen;
       }
       current.registerCallFinished();

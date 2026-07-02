@@ -394,6 +394,45 @@ public class BlockOutputStream extends OutputStream {
     }
   }
 
+  /**
+   * Writes {@code len} bytes starting at absolute position {@code off} of the
+   * given {@link ByteBuffer}. This mirrors {@link #write(byte[], int, int)} but
+   * feeds the buffer straight into the pooled {@link ChunkBuffer} through
+   * {@link ChunkBuffer#put(ByteBuffer)}, avoiding an intermediate byte[] copy.
+   * The caller's buffer position and limit are left unchanged.
+   */
+  public void write(ByteBuffer b, int off, int len) throws IOException {
+    checkOpen();
+    if (b == null) {
+      throw new NullPointerException();
+    }
+    if ((off < 0) || (off > b.capacity()) || (len < 0)
+        || ((off + len) > b.capacity()) || ((off + len) < 0)) {
+      throw new IndexOutOfBoundsException("Offset=" + off + " and len=" + len
+          + " don't match the buffer capacity of " + b.capacity());
+    }
+    if (len == 0) {
+      return;
+    }
+    synchronized (this) {
+      final ByteBuffer src = b.duplicate();
+      src.clear();
+      src.position(off).limit(off + len);
+      while (src.hasRemaining()) {
+        allocateNewBufferIfNeeded();
+        final int writeLen = Math.min(currentBufferRemaining, src.remaining());
+        final int srcLimit = src.limit();
+        src.limit(src.position() + writeLen);
+        currentBuffer.put(src);
+        src.limit(srcLimit);
+        currentBufferRemaining -= writeLen;
+        updateWrittenDataLength(writeLen);
+        writeChunkIfNeeded();
+        doFlushOrWatchIfNeeded();
+      }
+    }
+  }
+
   protected synchronized void updateWrittenDataLength(int writeLen) {
     writtenDataLength += writeLen;
   }

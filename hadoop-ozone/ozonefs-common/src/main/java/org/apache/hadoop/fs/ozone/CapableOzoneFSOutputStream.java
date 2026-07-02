@@ -19,6 +19,7 @@ package org.apache.hadoop.fs.ozone;
 
 import java.io.OutputStream;
 import org.apache.hadoop.crypto.CryptoOutputStream;
+import org.apache.hadoop.fs.ByteBufferWritable;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.impl.StoreImplementationUtils;
 import org.apache.hadoop.ozone.client.io.ECKeyOutputStream;
@@ -36,7 +37,7 @@ import org.apache.hadoop.util.StringUtils;
  * whereas the ones in Hadoop2 profile does not.
  */
 public class CapableOzoneFSOutputStream  extends OzoneFSOutputStream
-    implements StreamCapabilities {
+    implements StreamCapabilities, ByteBufferWritable {
   private final boolean isHsyncEnabled;
 
   public CapableOzoneFSOutputStream(OzoneFSOutputStream outputStream,
@@ -50,6 +51,12 @@ public class CapableOzoneFSOutputStream  extends OzoneFSOutputStream
     OutputStream os = getWrappedOutputStream().getOutputStream();
 
     if (os instanceof CryptoOutputStream) {
+      // Encryption copies the plaintext onto the heap before it reaches the key
+      // stream, so the direct ByteBuffer write path cannot be offered even if
+      // the wrapped key stream supports it.
+      if (StreamCapabilities.WRITEBYTEBUFFER.equalsIgnoreCase(capability)) {
+        return false;
+      }
       OutputStream wrapped = ((CryptoOutputStream) os).getWrappedStream();
       return hasWrappedCapability(wrapped, capability);
     }
@@ -65,6 +72,8 @@ public class CapableOzoneFSOutputStream  extends OzoneFSOutputStream
       case StreamCapabilities.HFLUSH:
       case StreamCapabilities.HSYNC:
         return isHsyncEnabled;
+      case StreamCapabilities.WRITEBYTEBUFFER:
+        return true;
       default:
         return false;
       }
