@@ -1,0 +1,64 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements. See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/**
+ * Hadoop RPC (ProtobufRpcEngine) service exposed by the OMEventListenerRpcServer
+ * plugin.
+ *
+ * It surfaces OMEventListenerPluginContext#listCompletedRequestInfo over Hadoop
+ * IPC so that external, poll-style consumers built on the Hadoop ecosystem can
+ * tail the OM "completed request" ledger while reusing Hadoop's security
+ * (Kerberos/SASL), UGI, retry/failover proxies and service ACLs.
+ */
+syntax = "proto2";
+
+option java_package = "org.apache.hadoop.ozone.om.eventlistener.protocol.proto";
+option java_outer_classname = "OMEventListenerProtocolProtos";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
+
+package hadoop.ozone.eventlistener;
+
+import "OmClientProtocol.proto";
+
+/**
+ * Mirrors OMEventListenerPluginContext#listCompletedRequestInfo(Long, int).
+ */
+message ListCompletedRequestInfoRequest {
+  // Exclusive cursor: return entries with a transaction log index strictly
+  // greater than startKey. When absent, iteration begins at the oldest
+  // available entry.
+  optional int64 startKey = 1;
+
+  // Maximum number of entries to return. The server additionally clamps this
+  // to a configured upper bound for safety.
+  optional int32 maxResults = 2;
+}
+
+message ListCompletedRequestInfoResponse {
+  repeated hadoop.ozone.CompletedRequestInfo completedRequestInfo = 1;
+
+  // The transaction log index of the last entry in this page, echoed back for
+  // convenience so pollers can use it as the startKey of their next request.
+  // Absent when the page is empty.
+  optional int64 nextStartKey = 2;
+}
+
+service OMEventListenerService {
+  rpc listCompletedRequestInfo(ListCompletedRequestInfoRequest)
+      returns (ListCompletedRequestInfoResponse);
+}
