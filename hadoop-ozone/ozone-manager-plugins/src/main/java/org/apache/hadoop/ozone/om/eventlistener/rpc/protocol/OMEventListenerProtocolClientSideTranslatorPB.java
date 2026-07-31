@@ -24,11 +24,12 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.ipc_.ProtobufHelper;
 import org.apache.hadoop.ipc_.ProtobufRpcEngine;
 import org.apache.hadoop.ipc_.RPC;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.ozone.OmUtils;
+import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.eventlistener.protocol.proto.OMEventListenerProtocolProtos.ListCompletedRequestInfoRequest;
 import org.apache.hadoop.ozone.om.eventlistener.protocol.proto.OMEventListenerProtocolProtos.ListCompletedRequestInfoResponse;
 import org.apache.hadoop.ozone.om.helpers.OmCompletedRequestInfo;
@@ -87,24 +88,30 @@ public final class OMEventListenerProtocolClientSideTranslatorPB
    * Builder for a proxy using Hadoop RPC. This wires up Hadoop security (SASL /
    * Kerberos when configured), so the supplied {@link UserGroupInformation}
    * ticket is used to authenticate to the OM.
+   *
+   * <p>The client is always HA-aware: it fails over across a list of OM
+   * endpoints (round-robin) to reach the ready leader. By default, that list is
+   * discovered from configuration, in configuration order. Calling
+   * {@link #address(InetSocketAddress)} one or more times instead supplies the
+   * endpoints explicitly, in call order; the first is tried first. A single
+   * explicit address is just a one-element failover list.
    */
   public static class Builder {
     private final OzoneConfiguration conf;
-    private InetSocketAddress address;
+    private final List<InetSocketAddress> addresses = new ArrayList<>();
     private UserGroupInformation ugi;
 
     public Builder(OzoneConfiguration conf) {
       this.conf = conf;
     }
 
-    public Builder address(InetSocketAddress omAddress) {
-      this.address = omAddress;
+    public Builder address(InetSocketAddress address) {
+      addresses.add(address);
       return this;
     }
 
-    public Builder address(String omAddress) {
-      this.address = NetUtils.createSocketAddr(omAddress);
-      return this;
+    public Builder address(String address) {
+      return address(NetUtils.createSocketAddr(address));
     }
 
     public Builder ugi(UserGroupInformation userGroupInformation) {
@@ -113,22 +120,30 @@ public final class OMEventListenerProtocolClientSideTranslatorPB
     }
 
     public OMEventListenerProtocol build() throws IOException {
-      if (address == null) {
-        address = OmUtils.getOmAddress(conf);
-      }
-
       if (ugi == null) {
         ugi = UserGroupInformation.getCurrentUser();
       }
-
       RPC.setProtocolEngine(conf, OMEventListenerProtocolPB.class, ProtobufRpcEngine.class);
-      OMEventListenerProtocolPB proxy = RPC.getProxy(
-          OMEventListenerProtocolPB.class,
-          RPC.getProtocolVersion(OMEventListenerProtocolPB.class),
-          address,
-          ugi,
-          conf,
-          NetUtils.getDefaultSocketFactory(conf));
+
+      List<InetSocketAddress> failoverAddresses = addresses.isEmpty()
+          ? OMEventListenerRpcConfigUtils.getListenerAddresses(conf)
+          : addresses;
+
+      OMEventListenerRpcFailoverProxyProvider failoverProxyProvider =
+          new OMEventListenerRpcFailoverProxyProvider(conf, ugi,
+              failoverAddresses);
+
+      int maxFailovers = conf.getInt(
+          OMConfigKeys.OZONE_OM_PLUGIN_EVENTLISTENER_RPC_CLIENT_MAX_RETRIES_KEY,
+          OMConfigKeys
+              .OZONE_OM_PLUGIN_EVENTLISTENER_RPC_CLIENT_MAX_RETRIES_DEFAULT)
+          * failoverProxyProvider.getNodeCount();
+
+      OMEventListenerProtocolPB proxy =
+          (OMEventListenerProtocolPB) RetryProxy.create(
+              OMEventListenerProtocolPB.class,
+              failoverProxyProvider,
+              failoverProxyProvider.getRetryPolicy(maxFailovers));
       return new OMEventListenerProtocolClientSideTranslatorPB(proxy);
     }
   }

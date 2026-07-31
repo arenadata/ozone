@@ -24,6 +24,7 @@ import java.util.List;
 import org.apache.hadoop.ozone.om.eventlistener.OMEventListenerPluginContext;
 import org.apache.hadoop.ozone.om.eventlistener.protocol.proto.OMEventListenerProtocolProtos.ListCompletedRequestInfoRequest;
 import org.apache.hadoop.ozone.om.eventlistener.protocol.proto.OMEventListenerProtocolProtos.ListCompletedRequestInfoResponse;
+import org.apache.hadoop.ozone.om.eventlistener.rpc.protocol.OMEventListenerNotLeaderException;
 import org.apache.hadoop.ozone.om.eventlistener.rpc.protocol.OMEventListenerProtocolPB;
 import org.apache.hadoop.ozone.om.helpers.OmCompletedRequestInfo;
 import org.slf4j.Logger;
@@ -53,10 +54,11 @@ public class OMEventListenerProtocolServerSideTranslatorPB
       throws ServiceException {
 
     // Only the leader OM has an authoritative, up-to-date ledger. Followers
-    // reject the call so pollers can retry against (or fail over to) the
-    // leader rather than silently reading stale data.
+    // reject the call with a typed exception so the client's failover proxy
+    // provider fails over to another OM rather than reading stale data or
+    // treating this as a fatal error.
     if (!pluginContext.isLeaderReady()) {
-      throw new ServiceException(new IOException("OM is not the ready leader"));
+      throw new ServiceException(new OMEventListenerNotLeaderException());
     }
 
     // A nullable startKey maps to a proto2 optional: absent => start at oldest.

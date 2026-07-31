@@ -29,6 +29,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.eventlistener.OMEventListenerPluginContext;
 import org.apache.hadoop.ozone.om.eventlistener.rpc.protocol.OMEventListenerProtocol;
 import org.apache.hadoop.ozone.om.eventlistener.rpc.protocol.OMEventListenerProtocolClientSideTranslatorPB;
@@ -59,8 +60,12 @@ public class TestOMEventListenerRpcServer {
   @BeforeEach
   public void setUp() throws IOException {
     OzoneConfiguration conf = new OzoneConfiguration();
-    conf.set(OMEventListenerRpcServer.BIND_HOST_CONFIG, "127.0.0.1");
-    conf.setInt(OMEventListenerRpcServer.PORT_CONFIG, 0);
+    conf.set(OMConfigKeys.OZONE_OM_PLUGIN_EVENTLISTENER_RPC_BIND_HOST_KEY, "127.0.0.1");
+    conf.setInt(OMConfigKeys.OZONE_OM_PLUGIN_EVENTLISTENER_RPC_PORT_KEY, 0);
+    // These tests target a single OM and assert the immediate response, so
+    // disable client-side failover retries against that one endpoint.
+    conf.setInt(
+        OMConfigKeys.OZONE_OM_PLUGIN_EVENTLISTENER_RPC_CLIENT_MAX_RETRIES_KEY, 0);
 
     plugin = new OMEventListenerRpcServer();
     plugin.initialize(conf, pluginContext);
@@ -117,7 +122,7 @@ public class TestOMEventListenerRpcServer {
     when(pluginContext.isLeaderReady()).thenReturn(true);
     // request more than the default limit of 10_000
     when(pluginContext.listCompletedRequestInfo(
-        isNull(), eq(OMEventListenerRpcServer.DEFAULT_MAX_EVENTS_LIMIT)))
+        isNull(), eq(OMConfigKeys.OZONE_OM_PLUGIN_EVENTLISTENER_RPC_MAX_EVENTS_DEFAULT)))
         .thenReturn(Collections.emptyList());
 
     List<OmCompletedRequestInfo> result =

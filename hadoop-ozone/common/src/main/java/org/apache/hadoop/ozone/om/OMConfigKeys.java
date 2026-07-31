@@ -327,6 +327,50 @@ public final class OMConfigKeys {
   public static final String OZONE_OM_SECURITY_ADMIN_PROTOCOL_ACL =
       "ozone.om.security.admin.protocol.acl";
 
+  // Comma separated acls (users, groups) allowing clients accessing the OM
+  // event listener RPC protocol, which exposes the cluster-wide event ledger.
+  // When hadoop.security.authorization is true, this needs to be set in
+  // hadoop-policy.xml, "*" allows all users/groups to access.
+  public static final String OZONE_OM_SECURITY_EVENTLISTENER_PROTOCOL_ACL =
+      "ozone.om.security.eventlistener.protocol.acl";
+
+  // Configuration for the OM event listener RPC plugin
+  // (OMEventListenerRpcServer), which exposes the OM completed-request event
+  // ledger over Hadoop RPC for poll-style consumers.
+  public static final String OZONE_OM_PLUGIN_EVENTLISTENER_RPC_BIND_HOST_KEY =
+      "ozone.om.plugin.eventlistener.rpc.bind-host";
+  public static final String OZONE_OM_PLUGIN_EVENTLISTENER_RPC_BIND_HOST_DEFAULT =
+      "0.0.0.0";
+
+  public static final String OZONE_OM_PLUGIN_EVENTLISTENER_RPC_PORT_KEY =
+      "ozone.om.plugin.eventlistener.rpc.port";
+  public static final int OZONE_OM_PLUGIN_EVENTLISTENER_RPC_PORT_DEFAULT = 9891;
+
+  public static final String OZONE_OM_PLUGIN_EVENTLISTENER_RPC_HANDLER_COUNT_KEY =
+      "ozone.om.plugin.eventlistener.rpc.handler.count";
+  public static final int OZONE_OM_PLUGIN_EVENTLISTENER_RPC_HANDLER_COUNT_DEFAULT = 10;
+
+  public static final String OZONE_OM_PLUGIN_EVENTLISTENER_RPC_READ_THREADS_KEY =
+      "ozone.om.plugin.eventlistener.rpc.thread.count";
+  public static final int OZONE_OM_PLUGIN_EVENTLISTENER_RPC_READ_THREADS_DEFAULT = 3;
+
+  public static final String OZONE_OM_PLUGIN_EVENTLISTENER_RPC_MAX_EVENTS_KEY =
+      "ozone.om.plugin.eventlistener.rpc.events.max";
+  public static final int OZONE_OM_PLUGIN_EVENTLISTENER_RPC_MAX_EVENTS_DEFAULT = 10_000;
+
+  public static final String
+      OZONE_OM_PLUGIN_EVENTLISTENER_RPC_CLIENT_MAX_RETRIES_KEY =
+      "ozone.om.plugin.eventlistener.rpc.client.max.retries";
+  public static final int
+      OZONE_OM_PLUGIN_EVENTLISTENER_RPC_CLIENT_MAX_RETRIES_DEFAULT = 10;
+
+  public static final String
+      OZONE_OM_PLUGIN_EVENTLISTENER_RPC_CLIENT_WAIT_BETWEEN_RETRIES_KEY =
+      "ozone.om.plugin.eventlistener.rpc.client.wait.between.retries";
+  public static final long
+      OZONE_OM_PLUGIN_EVENTLISTENER_RPC_CLIENT_WAIT_BETWEEN_RETRIES_DEFAULT =
+      2000;
+
   @Deprecated
   public static final String OZONE_OM_ENABLE_FILESYSTEM_PATHS =
       OmConfig.Keys.ENABLE_FILESYSTEM_PATHS;

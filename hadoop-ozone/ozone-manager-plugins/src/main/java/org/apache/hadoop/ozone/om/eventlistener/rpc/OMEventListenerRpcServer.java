@@ -27,6 +27,7 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ipc_.ProtobufRpcEngine;
 import org.apache.hadoop.ipc_.RPC;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.eventlistener.OMEventListener;
 import org.apache.hadoop.ozone.om.eventlistener.OMEventListenerPluginContext;
 import org.apache.hadoop.ozone.om.eventlistener.protocol.proto.OMEventListenerProtocolProtos.OMEventListenerService;
@@ -49,22 +50,6 @@ public class OMEventListenerRpcServer implements OMEventListener {
   public static final Logger LOG =
       LoggerFactory.getLogger(OMEventListenerRpcServer.class);
 
-  private static final String CONFIG_PREFIX = "ozone.om.plugin.eventlistener.rpc.";
-  static final String BIND_HOST_CONFIG = CONFIG_PREFIX + "bind-host";
-  static final String DEFAULT_BIND_HOST = "0.0.0.0";
-
-  static final String PORT_CONFIG = CONFIG_PREFIX + "port";
-  static final int DEFAULT_PORT = 9891;
-
-  static final String HANDLER_COUNT_CONFIG = CONFIG_PREFIX + "handler.count";
-  static final int DEFAULT_HANDLER_COUNT = 10;
-
-  static final String READ_THREADS_CONFIG = CONFIG_PREFIX + "thread.count";
-  static final int DEFAULT_READ_THREADS = 3;
-
-  static final String MAX_EVENTS_LIMIT_CONFIG = CONFIG_PREFIX + "events.max";
-  static final int DEFAULT_MAX_EVENTS_LIMIT = 10_000;
-
   private OMEventListenerPluginContext pluginContext;
   private OzoneConfiguration conf;
   private String bindHost;
@@ -80,12 +65,21 @@ public class OMEventListenerRpcServer implements OMEventListener {
       OMEventListenerPluginContext context) {
     this.conf = configuration;
     this.pluginContext = context;
-    this.bindHost = configuration.get(BIND_HOST_CONFIG, DEFAULT_BIND_HOST);
-    this.port = configuration.getInt(PORT_CONFIG, DEFAULT_PORT);
-    this.handlerCount = configuration.getInt(HANDLER_COUNT_CONFIG, DEFAULT_HANDLER_COUNT);
-    this.readThreads = configuration.getInt(READ_THREADS_CONFIG, DEFAULT_READ_THREADS);
-    this.maxResultsLimit =
-        configuration.getInt(MAX_EVENTS_LIMIT_CONFIG, DEFAULT_MAX_EVENTS_LIMIT);
+    this.bindHost = configuration.get(
+        OMConfigKeys.OZONE_OM_PLUGIN_EVENTLISTENER_RPC_BIND_HOST_KEY,
+        OMConfigKeys.OZONE_OM_PLUGIN_EVENTLISTENER_RPC_BIND_HOST_DEFAULT);
+    this.port = configuration.getInt(
+        OMConfigKeys.OZONE_OM_PLUGIN_EVENTLISTENER_RPC_PORT_KEY,
+        OMConfigKeys.OZONE_OM_PLUGIN_EVENTLISTENER_RPC_PORT_DEFAULT);
+    this.handlerCount = configuration.getInt(
+        OMConfigKeys.OZONE_OM_PLUGIN_EVENTLISTENER_RPC_HANDLER_COUNT_KEY,
+        OMConfigKeys.OZONE_OM_PLUGIN_EVENTLISTENER_RPC_HANDLER_COUNT_DEFAULT);
+    this.readThreads = configuration.getInt(
+        OMConfigKeys.OZONE_OM_PLUGIN_EVENTLISTENER_RPC_READ_THREADS_KEY,
+        OMConfigKeys.OZONE_OM_PLUGIN_EVENTLISTENER_RPC_READ_THREADS_DEFAULT);
+    this.maxResultsLimit = configuration.getInt(
+        OMConfigKeys.OZONE_OM_PLUGIN_EVENTLISTENER_RPC_MAX_EVENTS_KEY,
+        OMConfigKeys.OZONE_OM_PLUGIN_EVENTLISTENER_RPC_MAX_EVENTS_DEFAULT);
     LOG.info("Initialized OMEventListenerRpcServer with bindHost={}, port={}, handlerCount={}, "
             + "readThreads={}, maxResultsLimit={}",
         bindHost, port, handlerCount, readThreads, maxResultsLimit);

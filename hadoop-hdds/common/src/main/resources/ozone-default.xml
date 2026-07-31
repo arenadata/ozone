@@ -2995,6 +2995,85 @@
     </description>
   </property>
   <property>
+    <name>ozone.om.security.eventlistener.protocol.acl</name>
+    <value>*</value>
+    <tag>SECURITY</tag>
+    <description>
+      Comma separated list of users and groups allowed to access the ozone
+      manager event listener RPC protocol, which exposes the cluster-wide
+      completed-request event ledger. Only enforced when
+      hadoop.security.authorization is true. The default (*) allows any
+      authenticated user; restrict this to the service account(s) that consume
+      the event feed in production.
+    </description>
+  </property>
+  <property>
+    <name>ozone.om.plugin.eventlistener.rpc.bind-host</name>
+    <value>0.0.0.0</value>
+    <tag>OM</tag>
+    <description>
+      The host/interface the OM event listener RPC server binds to. Used by the
+      OMEventListenerRpcServer plugin, which exposes the OM completed-request
+      event ledger over Hadoop RPC for poll-style consumers.
+    </description>
+  </property>
+  <property>
+    <name>ozone.om.plugin.eventlistener.rpc.port</name>
+    <value>9891</value>
+    <tag>OM</tag>
+    <description>
+      The port the OM event listener RPC server listens on. A value of 0 selects
+      an ephemeral port.
+    </description>
+  </property>
+  <property>
+    <name>ozone.om.plugin.eventlistener.rpc.handler.count</name>
+    <value>10</value>
+    <tag>OM</tag>
+    <description>
+      Number of RPC handler threads for the OM event listener RPC server.
+    </description>
+  </property>
+  <property>
+    <name>ozone.om.plugin.eventlistener.rpc.thread.count</name>
+    <value>3</value>
+    <tag>OM</tag>
+    <description>
+      Number of RPC reader threads for the OM event listener RPC server.
+    </description>
+  </property>
+  <property>
+    <name>ozone.om.plugin.eventlistener.rpc.events.max</name>
+    <value>10000</value>
+    <tag>OM</tag>
+    <description>
+      Upper bound on the number of event ledger entries returned in a single
+      listCompletedRequestInfo response. A client's requested maxResults is
+      clamped to this value.
+    </description>
+  </property>
+  <property>
+    <name>ozone.om.plugin.eventlistener.rpc.client.max.retries</name>
+    <value>10</value>
+    <tag>OM</tag>
+    <description>
+      Number of times the event listener RPC client retries a request per OM
+      before giving up. In an HA deployment the client builds one proxy per OM
+      and fails over between them until it reaches the ready
+      leader; the effective maximum number of failovers is this value
+      multiplied by the number of OMs.
+    </description>
+  </property>
+  <property>
+    <name>ozone.om.plugin.eventlistener.rpc.client.wait.between.retries</name>
+    <value>2000</value>
+    <tag>OM</tag>
+    <description>
+      Time in milliseconds the event listener RPC client waits after it has
+      tried every OM once before starting another round of failover retries.
+    </description>
+  </property>
+  <property>
     <name>ozone.security.reconfigure.protocol.acl</name>
     <value>*</value>
     <tag>SECURITY</tag>

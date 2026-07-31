@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone.om.eventlistener.rpc;
 
 import org.apache.hadoop.hdds.annotation.InterfaceAudience;
 import org.apache.hadoop.hdds.annotation.InterfaceStability;
+import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.eventlistener.rpc.protocol.OMEventListenerProtocol;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.Service;
@@ -33,7 +34,7 @@ import org.apache.hadoop.security.authorize.Service;
 public final class OMEventListenerRpcPolicyProvider extends PolicyProvider {
 
   public static final String EVENT_LISTENER_PROTOCOL_ACL =
-      "ozone.om.security.eventlistener.protocol.acl";
+      OMConfigKeys.OZONE_OM_SECURITY_EVENTLISTENER_PROTOCOL_ACL;
 
   private static final OMEventListenerRpcPolicyProvider INSTANCE =
       new OMEventListenerRpcPolicyProvider();
