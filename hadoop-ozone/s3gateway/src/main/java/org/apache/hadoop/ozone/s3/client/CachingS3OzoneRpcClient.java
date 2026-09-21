@@ -27,8 +27,8 @@ import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CA
 import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_KEY_MAX_SIZE_DEFAULT;
 import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_METRICS_ENABLED;
 import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_METRICS_ENABLED_DEFAULT;
-import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_VOLUME_ENTRY_TTL_SECONDS;
-import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_VOLUME_ENTRY_TTL_SECONDS_DEFAULT;
+import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_VOLUME_ENTRY_TTL_MS;
+import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_VOLUME_ENTRY_TTL_MS_DEFAULT;
 import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_VOLUME_MAX_SIZE;
 import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_VOLUME_MAX_SIZE_DEFAULT;
 
@@ -84,8 +84,8 @@ public class CachingS3OzoneRpcClient extends RpcClient {
         this::loadVolumeContext,
         conf.getInt(OZONE_S3G_OBJECT_CACHE_VOLUME_MAX_SIZE,
             OZONE_S3G_OBJECT_CACHE_VOLUME_MAX_SIZE_DEFAULT),
-        Duration.ofMillis(conf.getLong(OZONE_S3G_OBJECT_CACHE_VOLUME_ENTRY_TTL_SECONDS,
-            OZONE_S3G_OBJECT_CACHE_VOLUME_ENTRY_TTL_SECONDS_DEFAULT))
+        Duration.ofMillis(conf.getLong(OZONE_S3G_OBJECT_CACHE_VOLUME_ENTRY_TTL_MS,
+            OZONE_S3G_OBJECT_CACHE_VOLUME_ENTRY_TTL_MS_DEFAULT))
     );
 
     this.bucketCache = new LocalOzoneObjectCache<>(
@@ -334,6 +334,15 @@ public class CachingS3OzoneRpcClient extends RpcClient {
                                String keyName, Map<String, String> tags) throws IOException {
     try {
       super.putObjectTagging(volumeName, bucketName, keyName, tags);
+    } finally {
+      evictKeyCacheEntry(bucketName, keyName);
+    }
+  }
+
+  @Override
+  public void deleteObjectTagging(String volumeName, String bucketName, String keyName) throws IOException {
+    try {
+      super.deleteObjectTagging(volumeName, bucketName, keyName);
     } finally {
       evictKeyCacheEntry(bucketName, keyName);
     }

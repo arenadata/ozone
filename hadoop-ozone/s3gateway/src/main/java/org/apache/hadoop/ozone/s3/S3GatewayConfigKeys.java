@@ -86,9 +86,9 @@ public final class S3GatewayConfigKeys {
       "ozone.s3g.object.cache.volume.size";
   public static final int OZONE_S3G_OBJECT_CACHE_VOLUME_MAX_SIZE_DEFAULT = 10;
 
-  public static final String OZONE_S3G_OBJECT_CACHE_VOLUME_ENTRY_TTL_SECONDS =
+  public static final String OZONE_S3G_OBJECT_CACHE_VOLUME_ENTRY_TTL_MS =
       "ozone.s3g.object.cache.volume.ttl.ms";
-  public static final long OZONE_S3G_OBJECT_CACHE_VOLUME_ENTRY_TTL_SECONDS_DEFAULT = 3000L;
+  public static final long OZONE_S3G_OBJECT_CACHE_VOLUME_ENTRY_TTL_MS_DEFAULT = 3000L;
 
   public static final String OZONE_S3G_OBJECT_CACHE_BUCKET_MAX_SIZE =
       "ozone.s3g.object.cache.bucket.size";
