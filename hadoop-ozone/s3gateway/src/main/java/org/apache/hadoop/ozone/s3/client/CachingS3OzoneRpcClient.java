@@ -289,11 +289,25 @@ public class CachingS3OzoneRpcClient extends RpcClient {
     try {
       return super.setAcl(obj, acls);
     } finally {
-      if (obj.getResourceType() == OzoneObj.ResourceType.BUCKET) {
-        evictBucketCacheEntry(obj.getVolumeName(), obj.getBucketName());
-      } else if (obj.getResourceType() == OzoneObj.ResourceType.KEY) {
-        evictKeyCacheEntry(obj.getBucketName(), obj.getKeyName());
-      }
+      evictAclTarget(obj);
+    }
+  }
+
+  @Override
+  public boolean addAcl(OzoneObj obj, OzoneAcl acl) throws IOException {
+    try {
+      return super.addAcl(obj, acl);
+    } finally {
+      evictAclTarget(obj);
+    }
+  }
+
+  @Override
+  public boolean removeAcl(OzoneObj obj, OzoneAcl acl) throws IOException {
+    try {
+      return super.removeAcl(obj, acl);
+    } finally {
+      evictAclTarget(obj);
     }
   }
 
@@ -361,6 +375,30 @@ public class CachingS3OzoneRpcClient extends RpcClient {
 
   private OzoneOutputStream withEvictOnClose(OzoneOutputStream stream, String bucketName, String keyName) {
     return new EvictingOzoneOutputStream(stream, () -> evictKeyCacheEntry(bucketName, keyName));
+  }
+
+  private void evictAclTarget(OzoneObj obj) {
+    switch (obj.getResourceType()) {
+    case VOLUME:
+      evictVolumeCacheEntry();
+      break;
+    case BUCKET:
+      evictBucketCacheEntry(obj.getVolumeName(), obj.getBucketName());
+      break;
+    case KEY:
+      evictKeyCacheEntry(obj.getBucketName(), obj.getKeyName());
+      break;
+    default:
+      break;
+    }
+  }
+
+  private void evictVolumeCacheEntry() {
+    try {
+      volumeCache.evict(new S3ObjectCacheKey(getThreadLocalS3Auth()));
+    } catch (Exception e) {
+      LOG.warn("Failed to evict volume cache entry", e);
+    }
   }
 
   private void evictBucketCacheEntry(String volumeName, String bucketName) {
