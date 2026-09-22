@@ -17,12 +17,12 @@
 
 package org.apache.hadoop.ozone.s3.client;
 
-import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_BUCKET_ENTRY_TTL_SECONDS;
-import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_BUCKET_ENTRY_TTL_SECONDS_DEFAULT;
+import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_BUCKET_ENTRY_TTL_MS;
+import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_BUCKET_ENTRY_TTL_MS_DEFAULT;
 import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_BUCKET_MAX_SIZE;
 import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_BUCKET_MAX_SIZE_DEFAULT;
-import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_KEY_ENTRY_TTL_SECONDS;
-import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_KEY_ENTRY_TTL_SECONDS_DEFAULT;
+import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_KEY_ENTRY_TTL_MS;
+import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_KEY_ENTRY_TTL_MS_DEFAULT;
 import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_KEY_MAX_SIZE;
 import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_KEY_MAX_SIZE_DEFAULT;
 import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_METRICS_ENABLED;
@@ -92,14 +92,14 @@ public class CachingS3OzoneRpcClient extends RpcClient {
         this::loadBucket,
         conf.getInt(OZONE_S3G_OBJECT_CACHE_BUCKET_MAX_SIZE,
             OZONE_S3G_OBJECT_CACHE_BUCKET_MAX_SIZE_DEFAULT),
-        Duration.ofMillis(conf.getLong(OZONE_S3G_OBJECT_CACHE_BUCKET_ENTRY_TTL_SECONDS,
-            OZONE_S3G_OBJECT_CACHE_BUCKET_ENTRY_TTL_SECONDS_DEFAULT))
+        Duration.ofMillis(conf.getLong(OZONE_S3G_OBJECT_CACHE_BUCKET_ENTRY_TTL_MS,
+            OZONE_S3G_OBJECT_CACHE_BUCKET_ENTRY_TTL_MS_DEFAULT))
     );
 
     int keyCacheMaxSize = conf.getInt(OZONE_S3G_OBJECT_CACHE_KEY_MAX_SIZE,
         OZONE_S3G_OBJECT_CACHE_KEY_MAX_SIZE_DEFAULT);
-    Duration keyCacheTtl = Duration.ofMillis(conf.getLong(OZONE_S3G_OBJECT_CACHE_KEY_ENTRY_TTL_SECONDS,
-        OZONE_S3G_OBJECT_CACHE_KEY_ENTRY_TTL_SECONDS_DEFAULT));
+    Duration keyCacheTtl = Duration.ofMillis(conf.getLong(OZONE_S3G_OBJECT_CACHE_KEY_ENTRY_TTL_MS,
+        OZONE_S3G_OBJECT_CACHE_KEY_ENTRY_TTL_MS_DEFAULT));
 
     this.headKeyInfoCache = new LocalOzoneObjectCache<>(
         this::loadHeadKeyInfoWithCtx,

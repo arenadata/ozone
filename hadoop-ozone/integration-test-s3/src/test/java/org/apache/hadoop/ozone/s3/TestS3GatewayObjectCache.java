@@ -18,10 +18,10 @@
 package org.apache.hadoop.ozone.s3;
 
 import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_HTTP_ADDRESS_KEY;
-import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_BUCKET_ENTRY_TTL_SECONDS;
+import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_BUCKET_ENTRY_TTL_MS;
 import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_BUCKET_MAX_SIZE;
 import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_ENABLED;
-import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_KEY_ENTRY_TTL_SECONDS;
+import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_KEY_ENTRY_TTL_MS;
 import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_KEY_MAX_SIZE;
 import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_VOLUME_ENTRY_TTL_MS;
 import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_VOLUME_MAX_SIZE;
@@ -103,9 +103,9 @@ public class TestS3GatewayObjectCache {
     OzoneConfiguration conf = new OzoneConfiguration();
     conf.setBoolean(OZONE_S3G_OBJECT_CACHE_ENABLED, true);
     conf.setInt(OZONE_S3G_OBJECT_CACHE_KEY_MAX_SIZE, 1);
-    conf.setLong(OZONE_S3G_OBJECT_CACHE_KEY_ENTRY_TTL_SECONDS, 10_000L);
+    conf.setLong(OZONE_S3G_OBJECT_CACHE_KEY_ENTRY_TTL_MS, 10_000L);
     conf.setInt(OZONE_S3G_OBJECT_CACHE_BUCKET_MAX_SIZE, 1);
-    conf.setLong(OZONE_S3G_OBJECT_CACHE_BUCKET_ENTRY_TTL_SECONDS, 20_000L);
+    conf.setLong(OZONE_S3G_OBJECT_CACHE_BUCKET_ENTRY_TTL_MS, 20_000L);
     conf.setInt(OZONE_S3G_OBJECT_CACHE_VOLUME_MAX_SIZE, 1);
     conf.setLong(OZONE_S3G_OBJECT_CACHE_VOLUME_ENTRY_TTL_MS, 30_000L);
     S3GatewayService s3g = new S3GatewayService();
