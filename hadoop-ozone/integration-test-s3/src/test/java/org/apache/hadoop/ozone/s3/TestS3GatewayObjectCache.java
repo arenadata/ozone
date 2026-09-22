@@ -26,6 +26,7 @@ import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CA
 import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_VOLUME_ENTRY_TTL_MS;
 import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_VOLUME_MAX_SIZE;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.IOException;
@@ -47,10 +48,13 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneClient;
+import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.ozone.s3.client.cache.S3ObjectCacheMetrics;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
@@ -73,14 +77,14 @@ import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 /**
  * Integration tests for the S3 Gateway object cache (ADH-8124).
  *
- * The S3 Gateway is started with {@code ozone.s3g.object.cache.enabled=true},
- * a single-entry key cache and an explicit key TTL, so that write-eviction,
- * size-eviction and TTL-eviction behavior can be verified through the S3
- * API. A single gateway instance is used, so cache eviction is
- * deterministic.
+ * The gateway runs with single-entry volume/bucket/key caches and short
+ * TTLs, so write, size and TTL evictions are verified through the S3 API.
+ * Volume cache eviction is not observable through the S3 API and is
+ * verified via the published cache metrics instead.
  *
- * A direct Ozone client is used for out-of-band operations that must not
- * evict the S3 Gateway cache entries.
+ * Each test uses dedicated S3 users (cache keys are scoped by access ID)
+ * and starts with empty caches. A direct Ozone client performs out-of-band
+ * operations that must not evict cache entries.
  */
 public class TestS3GatewayObjectCache {
 
@@ -90,24 +94,28 @@ public class TestS3GatewayObjectCache {
   private static final String CONTENT_B = "s3g-object-cache-test-content-b";
   private static final String TAG_KEY = "test-tag-key";
   private static final String TAG_VALUE = "test-tag-value";
-  private static final long TTL_WAIT_TIMEOUT_MS = 30_000;
+  private static final long TTL_CONFIG_TIMEOUT = 3_000L;
+  private static final Duration TTL_WAIT_TIMEOUT = Duration.ofSeconds(5);
+  private static final Duration BEFORE_TTL_WAIT_TIMEOUT = Duration.ofSeconds(2);
 
   private static MiniOzoneCluster cluster;
   private static OzoneClient directClient;
-  private static S3Client s3;
-  private static S3Client s3User2;
   private static OzoneBucket s3OzoneBucket;
+  private static URI s3gEndpoint;
+
+  private S3Client s3;
+  private S3Client s3User2;
 
   @BeforeAll
   static void init() throws Exception {
     OzoneConfiguration conf = new OzoneConfiguration();
     conf.setBoolean(OZONE_S3G_OBJECT_CACHE_ENABLED, true);
     conf.setInt(OZONE_S3G_OBJECT_CACHE_KEY_MAX_SIZE, 1);
-    conf.setLong(OZONE_S3G_OBJECT_CACHE_KEY_ENTRY_TTL_MS, 10_000L);
+    conf.setLong(OZONE_S3G_OBJECT_CACHE_KEY_ENTRY_TTL_MS, TTL_CONFIG_TIMEOUT);
     conf.setInt(OZONE_S3G_OBJECT_CACHE_BUCKET_MAX_SIZE, 1);
-    conf.setLong(OZONE_S3G_OBJECT_CACHE_BUCKET_ENTRY_TTL_MS, 20_000L);
+    conf.setLong(OZONE_S3G_OBJECT_CACHE_BUCKET_ENTRY_TTL_MS, TTL_CONFIG_TIMEOUT);
     conf.setInt(OZONE_S3G_OBJECT_CACHE_VOLUME_MAX_SIZE, 1);
-    conf.setLong(OZONE_S3G_OBJECT_CACHE_VOLUME_ENTRY_TTL_MS, 30_000L);
+    conf.setLong(OZONE_S3G_OBJECT_CACHE_VOLUME_ENTRY_TTL_MS, TTL_CONFIG_TIMEOUT);
     S3GatewayService s3g = new S3GatewayService();
     cluster = MiniOzoneCluster.newBuilder(conf)
         .setNumDatanodes(3)
@@ -115,29 +123,18 @@ public class TestS3GatewayObjectCache {
         .build();
     cluster.waitForClusterToBeReady();
     OzoneConfiguration s3gConf = s3g.getConf();
-    s3 = new S3ClientFactory(s3gConf).createS3ClientV2();
-    s3User2 = S3Client.builder()
-        .region(Region.US_EAST_1)
-        .endpointOverride(new URI("http://" + s3gConf
-            .get(OZONE_S3G_HTTP_ADDRESS_KEY)))
-        .credentialsProvider(StaticCredentialsProvider.create(
-            AwsBasicCredentials.create("user2", "password2")))
-        .forcePathStyle(true)
-        .build();
+    s3gEndpoint = URI.create(
+        "http://" + s3gConf.get(OZONE_S3G_HTTP_ADDRESS_KEY));
     directClient = cluster.newClient();
-    s3.createBucket(b -> b.bucket(BUCKET));
+    try (S3Client bucketOwner = newS3Client("user-init")) {
+      bucketOwner.createBucket(b -> b.bucket(BUCKET));
+    }
     s3OzoneBucket = directClient.getObjectStore()
         .getVolume(S3_VOLUME_NAME).getBucket(BUCKET);
   }
 
   @AfterAll
   static void shutdown() throws IOException {
-    if (s3 != null) {
-      s3.close();
-    }
-    if (s3User2 != null) {
-      s3User2.close();
-    }
     if (directClient != null) {
       directClient.close();
     }
@@ -146,8 +143,24 @@ public class TestS3GatewayObjectCache {
     }
   }
 
+  @BeforeEach
+  void setUp() {
+    s3 = newS3Client("user-" + UUID.randomUUID());
+    s3User2 = newS3Client("user2-" + UUID.randomUUID());
+  }
+
+  @AfterEach
+  void tearDown() {
+    if (s3 != null) {
+      s3.close();
+    }
+    if (s3User2 != null) {
+      s3User2.close();
+    }
+  }
+
   @Test
-  void testPutGetHeadObjectWithCache() {
+  void testObjectReadsAreServedFromCache() {
     final String key = uniqueKey();
     putObject(key, CONTENT_A);
     final HeadObjectResponse head = head(key);
@@ -177,7 +190,7 @@ public class TestS3GatewayObjectCache {
   }
 
   @Test
-  void testMultiDeleteEvictsAllKeyCacheEntries() {
+  void testDeleteObjectsEvictAllKeyCacheEntries() {
     final String key1 = uniqueKey();
     final String key2 = uniqueKey();
     putObject(key1, CONTENT_A);
@@ -197,7 +210,7 @@ public class TestS3GatewayObjectCache {
   }
 
   @Test
-  void testMultipartUploadEvictsKeyCacheOnComplete() {
+  void testCompleteMultipartUploadEvictsKeyCache() {
     final String key = uniqueKey();
     putObject(key, CONTENT_A);
     final HeadObjectResponse firstHead = head(key);
@@ -218,7 +231,7 @@ public class TestS3GatewayObjectCache {
   }
 
   @Test
-  void testObjectTaggingEvictsKeyCache() {
+  void testPutObjectTaggingEvictsKeyCache() {
     final String key = uniqueKey();
     putObject(key, CONTENT_A);
     assertThat(getObjectAsBytes(key).response().tagCount()).isNull();
@@ -251,26 +264,7 @@ public class TestS3GatewayObjectCache {
   }
 
   @Test
-  void testTtlEvictionReloadsKeyCacheEntry() throws Exception {
-    final String key = uniqueKey();
-    putObject(key, CONTENT_A);
-    head(key);
-    s3OzoneBucket.deleteKey(key);
-    Awaitility.await("Key should exist in cache until evicted by TTL timeout")
-        .during(Duration.ofSeconds(9))
-        .atMost(Duration.ofSeconds(15))
-        .pollInterval(Duration.ofMillis(250))
-        .untilAsserted(() -> assertThat(head(key).contentLength())
-            .isEqualTo(CONTENT_A.length()));
-    Awaitility.await("Key should not exist after TTL timeout")
-        .atMost(Duration.ofMillis(TTL_WAIT_TIMEOUT_MS))
-        .pollInterval(Duration.ofMillis(250))
-        .untilAsserted(() -> assertThatThrownBy(() -> head(key))
-            .isInstanceOf(NoSuchKeyException.class));
-  }
-
-  @Test
-  void testCacheSizeLimitEvictsOldestKeyEntry() throws Exception {
+  void testKeyCacheSizeLimitEvictsOldestEntry() throws Exception {
     final String keyA = uniqueKey();
     final String keyB = uniqueKey();
     putObject(keyA, CONTENT_A);
@@ -278,24 +272,109 @@ public class TestS3GatewayObjectCache {
     head(keyA);
     head(keyB);
     s3OzoneBucket.deleteKey(keyA);
-    assertThatThrownBy(() -> head(keyA))
-        .isInstanceOf(NoSuchKeyException.class);
+    assertThatThrownBy(() -> head(keyA)).isInstanceOf(NoSuchKeyException.class);
+    s3OzoneBucket.deleteKey(keyB);
+    assertThatCode(() -> head(keyB)).doesNotThrowAnyException();
   }
 
   @Test
-  void testVolumeContextServedStaleUntilTtlExpires() throws Exception {
+  void testKeyCacheTtlEvictionReloadsEntry() throws Exception {
+    final String key = uniqueKey();
+    putObject(key, CONTENT_A);
+    head(key);
+    s3OzoneBucket.deleteKey(key);
+    Awaitility.await("Key should exist in cache until evicted by TTL timeout")
+        .during(BEFORE_TTL_WAIT_TIMEOUT)
+        .atMost(TTL_WAIT_TIMEOUT)
+        .pollInterval(Duration.ofMillis(250))
+        .untilAsserted(() -> assertThat(head(key).contentLength())
+            .isEqualTo(CONTENT_A.length()));
+    Awaitility.await("Key should not exist after TTL timeout")
+        .atMost(TTL_WAIT_TIMEOUT)
+        .pollInterval(Duration.ofMillis(250))
+        .untilAsserted(() -> assertThatThrownBy(() -> head(key))
+            .isInstanceOf(NoSuchKeyException.class));
+  }
+
+  @Test
+  void testBucketCacheSizeLimitEvictsOldestEntry() throws Exception {
+    final String bucketA = uniqueBucket();
+    final String bucketB = uniqueBucket();
+    s3.createBucket(b -> b.bucket(bucketA));
+    s3.createBucket(b -> b.bucket(bucketB));
+    s3.headBucket(b -> b.bucket(bucketA));
+    s3.headBucket(b -> b.bucket(bucketB));
+    final OzoneVolume s3Volume = directClient.getObjectStore()
+        .getVolume(S3_VOLUME_NAME);
+    s3Volume.deleteBucket(bucketA);
+    assertThatThrownBy(() -> s3.headBucket(b -> b.bucket(bucketA)))
+        .isInstanceOf(NoSuchBucketException.class);
+    s3Volume.deleteBucket(bucketB);
+    assertThatCode(() -> s3.headBucket(b -> b.bucket(bucketB)))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  void testBucketCacheTtlEvictionReloadsEntry() throws Exception {
     final String bucket = uniqueBucket();
     s3.createBucket(b -> b.bucket(bucket));
     s3.headBucket(b -> b.bucket(bucket));
     directClient.getObjectStore().getVolume(S3_VOLUME_NAME)
         .deleteBucket(bucket);
-    directClient.getObjectStore().deleteVolume(S3_VOLUME_NAME);
-    s3.headBucket(b -> b.bucket(bucket));
-    awaitNoSuchBucket(bucket);
+    Awaitility.await("Bucket should exist in cache until evicted by TTL timeout")
+        .during(BEFORE_TTL_WAIT_TIMEOUT)
+        .atMost(TTL_WAIT_TIMEOUT)
+        .pollInterval(Duration.ofMillis(250))
+        .untilAsserted(() -> assertThatCode(
+            () -> s3.headBucket(b -> b.bucket(bucket)))
+            .doesNotThrowAnyException());
+    Awaitility.await("Bucket should not exist after TTL timeout")
+        .atMost(TTL_WAIT_TIMEOUT)
+        .pollInterval(Duration.ofMillis(250))
+        .untilAsserted(() ->
+            assertThatThrownBy(() -> s3.headBucket(b -> b.bucket(bucket)))
+                .isInstanceOf(NoSuchBucketException.class));
   }
 
   @Test
-  void testGetPartsUseOwnCache() throws Exception {
+  void testVolumeCacheSizeLimitEvictsOldestEntry() {
+    // load the volume cache entry for the first user to increase evictionCount
+    s3.headBucket(b -> b.bucket(BUCKET));
+    final long evictionsBefore = cacheGauge("s3VolumeCache", "evictionCount");
+    s3User2.headBucket(b -> b.bucket(BUCKET));
+    Awaitility.await("The oldest volume cache entry should be evicted by size")
+        .atMost(TTL_WAIT_TIMEOUT)
+        .pollInterval(Duration.ofMillis(250))
+        .untilAsserted(() ->
+            assertThat(cacheGauge("s3VolumeCache", "evictionCount"))
+                .isGreaterThan(evictionsBefore));
+  }
+
+  @Test
+  void testVolumeCacheTtlEvictionReloadsEntry() {
+    s3.headBucket(b -> b.bucket(BUCKET));
+    final long missesBefore = cacheGauge("s3VolumeCache", "missCount");
+    Awaitility.await("Volume missCount should not increase before evict miss")
+        .during(BEFORE_TTL_WAIT_TIMEOUT)
+        .atMost(TTL_WAIT_TIMEOUT)
+        .pollInterval(Duration.ofMillis(250))
+        .untilAsserted(() -> {
+          s3.headBucket(b -> b.bucket(BUCKET));
+          assertThat(cacheGauge("s3VolumeCache", "missCount"))
+              .isEqualTo(missesBefore);
+        });
+    Awaitility.await("Volume missCount should increase after evict miss")
+        .atMost(TTL_WAIT_TIMEOUT)
+        .pollInterval(Duration.ofMillis(250))
+        .untilAsserted(() -> {
+          s3.headBucket(b -> b.bucket(BUCKET));
+          assertThat(cacheGauge("s3VolumeCache", "missCount"))
+              .isGreaterThan(missesBefore + 1);
+        });
+  }
+
+  @Test
+  void testGetObjectByPartNumberUsesKeyDetailsCache() throws Exception {
     final String key = uniqueKey();
     // Non-last parts must be at least 5 MB in size. S3 limitation.
     final byte[] part1Content = new byte[5 * 1024 * 1024 + 1];
@@ -370,6 +449,26 @@ public class TestS3GatewayObjectCache {
         .value().longValue()).isGreaterThanOrEqualTo(1L);
   }
 
+  private static long cacheGauge(String cacheName, String gaugeName) {
+    final MetricsSource source = DefaultMetricsSystem.instance()
+        .getSource(S3ObjectCacheMetrics.class.getSimpleName());
+    assertThat(source)
+        .as("S3ObjectCacheMetrics source is not registered in the metrics")
+        .isNotNull();
+    final MetricsCollectorImpl collector = new MetricsCollectorImpl();
+    source.getMetrics(collector, true);
+    for (MetricsRecordImpl record : collector.getRecords()) {
+      if (cacheName.equals(tagValue(record, "cacheName"))) {
+        final AbstractMetric gauge = metric(record, gaugeName);
+        assertThat(gauge)
+            .as("%s does not publish the %s gauge", cacheName, gaugeName)
+            .isNotNull();
+        return gauge.value().longValue();
+      }
+    }
+    throw new AssertionError("No metrics record for cache " + cacheName);
+  }
+
   private static String tagValue(MetricsRecordImpl record, String tag) {
     for (MetricsTag metricsTag : record.tags()) {
       if (metricsTag.name().equals(tag)) {
@@ -389,12 +488,22 @@ public class TestS3GatewayObjectCache {
     return null;
   }
 
-  private static void putObject(String key, String content) {
+  private static S3Client newS3Client(String accessKeyId) {
+    return S3Client.builder()
+        .region(Region.US_EAST_1)
+        .endpointOverride(s3gEndpoint)
+        .credentialsProvider(StaticCredentialsProvider.create(
+            AwsBasicCredentials.create(accessKeyId, "password")))
+        .forcePathStyle(true)
+        .build();
+  }
+
+  private void putObject(String key, String content) {
     s3.putObject(b -> b.bucket(BUCKET).key(key),
         RequestBody.fromString(content));
   }
 
-  private static void putMultipartObject(
+  private void putMultipartObject(
       String key, byte[] part1Content, byte[] part2Content) {
     final String uploadId = s3.createMultipartUpload(
         b -> b.bucket(BUCKET).key(key)).uploadId();
@@ -412,15 +521,16 @@ public class TestS3GatewayObjectCache {
             .build()));
   }
 
-  private static HeadObjectResponse head(String key) {
+  private HeadObjectResponse head(String key) {
     return s3.headObject(b -> b.bucket(BUCKET).key(key));
   }
 
-  private static ResponseBytes<GetObjectResponse> getObjectAsBytes(String key) {
+  private ResponseBytes<GetObjectResponse> getObjectAsBytes(String key) {
     return s3.getObjectAsBytes(b -> b.bucket(BUCKET).key(key));
   }
 
-  private static ResponseBytes<GetObjectResponse> getObjectAsBytesByPartNum(String key, int partNumber) {
+  private ResponseBytes<GetObjectResponse> getObjectAsBytesByPartNum(
+      String key, int partNumber) {
     return s3.getObjectAsBytes(b -> b.bucket(BUCKET).key(key).partNumber(partNumber));
   }
 
@@ -430,14 +540,5 @@ public class TestS3GatewayObjectCache {
 
   private static String uniqueBucket() {
     return ("bucket-" + UUID.randomUUID()).toLowerCase(Locale.ROOT);
-  }
-
-  private static void awaitNoSuchBucket(String bucket) {
-    Awaitility.await("Cached volume for bucket is evicted after the TTL")
-        .atMost(Duration.ofMillis(TTL_WAIT_TIMEOUT_MS))
-        .pollInterval(Duration.ofMillis(250))
-        .untilAsserted(() ->
-            assertThatThrownBy(() -> s3.headBucket(b -> b.bucket(bucket)))
-                .isInstanceOf(NoSuchBucketException.class));
   }
 }
