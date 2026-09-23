@@ -17,18 +17,18 @@
 
 package org.apache.hadoop.ozone.s3.client;
 
-import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_BUCKET_ENTRY_TTL_SECONDS;
-import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_BUCKET_ENTRY_TTL_SECONDS_DEFAULT;
+import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_BUCKET_ENTRY_TTL_MS;
+import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_BUCKET_ENTRY_TTL_MS_DEFAULT;
 import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_BUCKET_MAX_SIZE;
 import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_BUCKET_MAX_SIZE_DEFAULT;
-import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_KEY_ENTRY_TTL_SECONDS;
-import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_KEY_ENTRY_TTL_SECONDS_DEFAULT;
+import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_KEY_ENTRY_TTL_MS;
+import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_KEY_ENTRY_TTL_MS_DEFAULT;
 import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_KEY_MAX_SIZE;
 import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_KEY_MAX_SIZE_DEFAULT;
 import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_METRICS_ENABLED;
 import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_METRICS_ENABLED_DEFAULT;
-import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_VOLUME_ENTRY_TTL_SECONDS;
-import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_VOLUME_ENTRY_TTL_SECONDS_DEFAULT;
+import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_VOLUME_ENTRY_TTL_MS;
+import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_VOLUME_ENTRY_TTL_MS_DEFAULT;
 import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_VOLUME_MAX_SIZE;
 import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_OBJECT_CACHE_VOLUME_MAX_SIZE_DEFAULT;
 
@@ -84,22 +84,22 @@ public class CachingS3OzoneRpcClient extends RpcClient {
         this::loadVolumeContext,
         conf.getInt(OZONE_S3G_OBJECT_CACHE_VOLUME_MAX_SIZE,
             OZONE_S3G_OBJECT_CACHE_VOLUME_MAX_SIZE_DEFAULT),
-        Duration.ofMillis(conf.getLong(OZONE_S3G_OBJECT_CACHE_VOLUME_ENTRY_TTL_SECONDS,
-            OZONE_S3G_OBJECT_CACHE_VOLUME_ENTRY_TTL_SECONDS_DEFAULT))
+        Duration.ofMillis(conf.getLong(OZONE_S3G_OBJECT_CACHE_VOLUME_ENTRY_TTL_MS,
+            OZONE_S3G_OBJECT_CACHE_VOLUME_ENTRY_TTL_MS_DEFAULT))
     );
 
     this.bucketCache = new LocalOzoneObjectCache<>(
         this::loadBucket,
         conf.getInt(OZONE_S3G_OBJECT_CACHE_BUCKET_MAX_SIZE,
             OZONE_S3G_OBJECT_CACHE_BUCKET_MAX_SIZE_DEFAULT),
-        Duration.ofMillis(conf.getLong(OZONE_S3G_OBJECT_CACHE_BUCKET_ENTRY_TTL_SECONDS,
-            OZONE_S3G_OBJECT_CACHE_BUCKET_ENTRY_TTL_SECONDS_DEFAULT))
+        Duration.ofMillis(conf.getLong(OZONE_S3G_OBJECT_CACHE_BUCKET_ENTRY_TTL_MS,
+            OZONE_S3G_OBJECT_CACHE_BUCKET_ENTRY_TTL_MS_DEFAULT))
     );
 
     int keyCacheMaxSize = conf.getInt(OZONE_S3G_OBJECT_CACHE_KEY_MAX_SIZE,
         OZONE_S3G_OBJECT_CACHE_KEY_MAX_SIZE_DEFAULT);
-    Duration keyCacheTtl = Duration.ofMillis(conf.getLong(OZONE_S3G_OBJECT_CACHE_KEY_ENTRY_TTL_SECONDS,
-        OZONE_S3G_OBJECT_CACHE_KEY_ENTRY_TTL_SECONDS_DEFAULT));
+    Duration keyCacheTtl = Duration.ofMillis(conf.getLong(OZONE_S3G_OBJECT_CACHE_KEY_ENTRY_TTL_MS,
+        OZONE_S3G_OBJECT_CACHE_KEY_ENTRY_TTL_MS_DEFAULT));
 
     this.headKeyInfoCache = new LocalOzoneObjectCache<>(
         this::loadHeadKeyInfoWithCtx,
@@ -289,11 +289,25 @@ public class CachingS3OzoneRpcClient extends RpcClient {
     try {
       return super.setAcl(obj, acls);
     } finally {
-      if (obj.getResourceType() == OzoneObj.ResourceType.BUCKET) {
-        evictBucketCacheEntry(obj.getVolumeName(), obj.getBucketName());
-      } else if (obj.getResourceType() == OzoneObj.ResourceType.KEY) {
-        evictKeyCacheEntry(obj.getBucketName(), obj.getKeyName());
-      }
+      evictAclTarget(obj);
+    }
+  }
+
+  @Override
+  public boolean addAcl(OzoneObj obj, OzoneAcl acl) throws IOException {
+    try {
+      return super.addAcl(obj, acl);
+    } finally {
+      evictAclTarget(obj);
+    }
+  }
+
+  @Override
+  public boolean removeAcl(OzoneObj obj, OzoneAcl acl) throws IOException {
+    try {
+      return super.removeAcl(obj, acl);
+    } finally {
+      evictAclTarget(obj);
     }
   }
 
@@ -340,6 +354,15 @@ public class CachingS3OzoneRpcClient extends RpcClient {
   }
 
   @Override
+  public void deleteObjectTagging(String volumeName, String bucketName, String keyName) throws IOException {
+    try {
+      super.deleteObjectTagging(volumeName, bucketName, keyName);
+    } finally {
+      evictKeyCacheEntry(bucketName, keyName);
+    }
+  }
+
+  @Override
   public void close() throws IOException {
     try {
       super.close();
@@ -352,6 +375,30 @@ public class CachingS3OzoneRpcClient extends RpcClient {
 
   private OzoneOutputStream withEvictOnClose(OzoneOutputStream stream, String bucketName, String keyName) {
     return new EvictingOzoneOutputStream(stream, () -> evictKeyCacheEntry(bucketName, keyName));
+  }
+
+  private void evictAclTarget(OzoneObj obj) {
+    switch (obj.getResourceType()) {
+    case VOLUME:
+      evictVolumeCacheEntry();
+      break;
+    case BUCKET:
+      evictBucketCacheEntry(obj.getVolumeName(), obj.getBucketName());
+      break;
+    case KEY:
+      evictKeyCacheEntry(obj.getBucketName(), obj.getKeyName());
+      break;
+    default:
+      break;
+    }
+  }
+
+  private void evictVolumeCacheEntry() {
+    try {
+      volumeCache.evict(new S3ObjectCacheKey(getThreadLocalS3Auth()));
+    } catch (Exception e) {
+      LOG.warn("Failed to evict volume cache entry", e);
+    }
   }
 
   private void evictBucketCacheEntry(String volumeName, String bucketName) {
