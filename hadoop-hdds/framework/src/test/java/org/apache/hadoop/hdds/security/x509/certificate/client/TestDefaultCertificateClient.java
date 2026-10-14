@@ -59,6 +59,7 @@ import org.apache.hadoop.hdds.protocol.MockDatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos.SCMGetCertResponseProto;
 import org.apache.hadoop.hdds.protocolPB.SCMSecurityProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.security.SecurityConfig;
+import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.certificate.authority.CAType;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateSignRequest;
@@ -113,9 +114,17 @@ public class TestDefaultCertificateClient {
       dnCertClient.close();
     }
 
+    // Keep the CSR subject short: CI runners can have FQDNs that exceed the
+    // RFC 5280 64-char limit for commonName.
     dnCertClient = new DNCertificateClient(dnSecurityConfig, scmSecurityClient,
         MockDatanodeDetails.randomDatanodeDetails(), certSerialId, null,
-        () -> System.exit(1));
+        () -> System.exit(1)) {
+      @Override
+      public CertificateSignRequest.Builder configureCSRBuilder()
+          throws SCMSecurityException {
+        return super.configureCSRBuilder().setSubject("dn@localhost");
+      }
+    };
   }
 
   @AfterEach
