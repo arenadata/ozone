@@ -4784,7 +4784,9 @@
     <description>
       Optional. The hostname for the Datanode containing this
       configuration file.  Will be different for each machine.
-      Defaults to current hostname.
+      Defaults to current hostname. Also used as the hostname part of
+      the Datanode certificate subject; set it on hosts whose canonical
+      FQDN exceeds the RFC 5280 64-character limit for commonName.
     </description>
   </property>
   <property>
