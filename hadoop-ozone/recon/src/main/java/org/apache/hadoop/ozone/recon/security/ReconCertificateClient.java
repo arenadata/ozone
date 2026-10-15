@@ -79,6 +79,7 @@ public class ReconCertificateClient  extends DefaultCertificateClient {
           .setConfiguration(getSecurityConfig())
           .setSubject(subject);
 
+      LOG.info("Created csr for Recon-> subject:{}", subject);
       return builder;
     } catch (Exception e) {
       LOG.error("Failed to get hostname or current user", e);
