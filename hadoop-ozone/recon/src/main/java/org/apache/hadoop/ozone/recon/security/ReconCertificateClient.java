@@ -17,6 +17,7 @@
 
 package org.apache.hadoop.ozone.recon.security;
 
+import static org.apache.hadoop.hdds.recon.ReconConfigKeys.OZONE_RECON_HOSTNAME_KEY;
 import static org.apache.hadoop.hdds.security.x509.exception.CertificateException.ErrorCode.CSR_ERROR;
 
 import java.io.IOException;
@@ -65,7 +66,11 @@ public class ReconCertificateClient  extends DefaultCertificateClient {
     LOG.info("Creating CSR for Recon.");
     try {
       CertificateSignRequest.Builder builder = super.configureCSRBuilder();
-      String hostname = InetAddress.getLocalHost().getCanonicalHostName();
+      String hostname = getSecurityConfig().getConfiguration()
+          .get(OZONE_RECON_HOSTNAME_KEY);
+      if (hostname == null) {
+        hostname = InetAddress.getLocalHost().getCanonicalHostName();
+      }
       String subject = UserGroupInformation.getCurrentUser()
           .getShortUserName() + "@" + hostname;
 
