@@ -97,6 +97,9 @@ public class TestHddsSecureDatanodeInit {
   public static void setUp() throws Exception {
     conf = new OzoneConfiguration();
     conf.set(HddsConfigKeys.OZONE_METADATA_DIRS, testDir.getPath());
+    // Keep the CSR subject short: runner FQDNs can exceed the RFC 5280
+    // 64-char limit for commonName.
+    conf.set(HddsConfigKeys.HDDS_DATANODE_HOST_NAME_KEY, "localhost");
     //conf.set(ScmConfigKeys.OZONE_SCM_NAMES, "localhost");
     String volumeDir = testDir + "/disk1";
     conf.set(ScmConfigKeys.HDDS_DATANODE_DIR_KEY, volumeDir);

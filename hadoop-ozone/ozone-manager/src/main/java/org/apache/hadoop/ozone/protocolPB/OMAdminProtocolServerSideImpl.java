@@ -38,6 +38,7 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerAdminProtocolProtos.De
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerAdminProtocolProtos.OMConfigurationRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerAdminProtocolProtos.OMConfigurationResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerAdminProtocolProtos.OMNodeInfo;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * This class is the server-side translator that forwards requests received on
@@ -54,6 +55,18 @@ public class OMAdminProtocolServerSideImpl implements OMAdminProtocolPB {
   @Override
   public OMConfigurationResponse getOMConfiguration(RpcController controller,
       OMConfigurationRequest request) throws ServiceException {
+
+    try {
+      if (ozoneManager.isAdminAuthorizationEnabled() &&
+          !ozoneManager.isAdmin(getRemoteUser())) {
+        throw new OMException("Only administrators are authorized to get OM configuration.", PERMISSION_DENIED);
+      }
+    } catch (IOException ex) {
+      return OMConfigurationResponse.newBuilder()
+          .setSuccess(false)
+          .setErrorMsg(ex.getMessage() == null ? StringUtils.stringifyException(ex) : ex.getMessage())
+          .build();
+    }
 
     List<OMNodeDetails> oldOMNodesList = ozoneManager.getAllOMNodesInMemory();
     List<OMNodeDetails> newOMNodesList = ozoneManager.getAllOMNodesInNewConf();

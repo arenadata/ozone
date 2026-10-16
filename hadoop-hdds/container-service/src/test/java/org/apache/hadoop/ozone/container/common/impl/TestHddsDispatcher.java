@@ -340,8 +340,7 @@ public class TestHddsDispatcher {
       HddsDispatcher hddsDispatcher = new HddsDispatcher(
           conf, containerSet, volumeSet, handlers, context, metrics, null);
       hddsDispatcher.setClusterId(scmId.toString());
-      containerData.getVolume().getVolumeUsage()
-          .ifPresent(usage -> usage.incrementUsedSpace(60));
+      containerData.getVolume().incrementUsedSpace(60);
       usedSpace.addAndGet(60);
       ContainerCommandResponseProto response = hddsDispatcher
           .dispatch(getWriteChunkRequest(dd.getUuidString(), 1L, 1L), null);
@@ -492,48 +491,6 @@ public class TestHddsDispatcher {
       assertThat(logCapturer.getOutput())
           .contains("ContainerID " + writeChunkRequest.getContainerID()
               + " creation failed , Result: DISK_OUT_OF_SPACE");
-    } finally {
-      ContainerMetrics.remove();
-    }
-  }
-
-  @Test
-  public void testMalformedPutBlockDoesNotMarkContainerUnhealthy() throws IOException {
-    String testDirPath = testDir.getPath();
-    try {
-      UUID scmId = UUID.randomUUID();
-      OzoneConfiguration conf = new OzoneConfiguration();
-      conf.set(HDDS_DATANODE_DIR_KEY, testDirPath);
-      conf.set(OzoneConfigKeys.OZONE_METADATA_DIRS, testDirPath);
-      DatanodeDetails dd = randomDatanodeDetails();
-      HddsDispatcher hddsDispatcher = createDispatcher(dd, scmId, conf);
-
-      ContainerCommandRequestProto writeChunkRequest =
-          getWriteChunkRequest(dd.getUuidString(), 1L, 1L);
-      ContainerCommandResponseProto writeChunkResponse =
-          hddsDispatcher.dispatch(writeChunkRequest, null);
-      assertEquals(ContainerProtos.Result.SUCCESS, writeChunkResponse.getResult());
-
-      ContainerCommandRequestProto putBlockRequest =
-          ContainerTestHelper.getPutBlockRequest(writeChunkRequest);
-      ContainerProtos.BlockData malformedBlockData =
-          putBlockRequest.getPutBlock().getBlockData().toBuilder()
-              .setSize(putBlockRequest.getPutBlock().getBlockData().getSize() + 1)
-              .build();
-      ContainerCommandRequestProto malformedPutBlockRequest =
-          putBlockRequest.toBuilder()
-              .setPutBlock(putBlockRequest.getPutBlock().toBuilder()
-                  .setBlockData(malformedBlockData))
-              .build();
-
-      ContainerCommandResponseProto response =
-          hddsDispatcher.dispatch(malformedPutBlockRequest, null);
-      assertEquals(ContainerProtos.Result.MALFORMED_REQUEST, response.getResult());
-
-      Container container = hddsDispatcher.getContainer(1L);
-      assertNotNull(container);
-      assertTrue(container.getContainerData().isOpen());
-      assertFalse(container.getContainerData().isUnhealthy());
     } finally {
       ContainerMetrics.remove();
     }
@@ -788,6 +745,48 @@ public class TestHddsDispatcher {
         .setDatanodeUuid(writeChunkRequest.getDatanodeUuid())
         .setReadChunk(readChunkRequest)
         .build();
+  }
+
+  @Test
+  public void testMalformedPutBlockDoesNotMarkContainerUnhealthy() throws IOException {
+    String testDirPath = testDir.getPath();
+    try {
+      UUID scmId = UUID.randomUUID();
+      OzoneConfiguration conf = new OzoneConfiguration();
+      conf.set(HDDS_DATANODE_DIR_KEY, testDirPath);
+      conf.set(OzoneConfigKeys.OZONE_METADATA_DIRS, testDirPath);
+      DatanodeDetails dd = randomDatanodeDetails();
+      HddsDispatcher hddsDispatcher = createDispatcher(dd, scmId, conf);
+
+      ContainerCommandRequestProto writeChunkRequest =
+          getWriteChunkRequest(dd.getUuidString(), 1L, 1L);
+      ContainerCommandResponseProto writeChunkResponse =
+          hddsDispatcher.dispatch(writeChunkRequest, null);
+      assertEquals(ContainerProtos.Result.SUCCESS, writeChunkResponse.getResult());
+
+      ContainerCommandRequestProto putBlockRequest =
+          ContainerTestHelper.getPutBlockRequest(writeChunkRequest);
+      ContainerProtos.BlockData malformedBlockData =
+          putBlockRequest.getPutBlock().getBlockData().toBuilder()
+              .setSize(putBlockRequest.getPutBlock().getBlockData().getSize() + 1)
+              .build();
+      ContainerCommandRequestProto malformedPutBlockRequest =
+          putBlockRequest.toBuilder()
+              .setPutBlock(putBlockRequest.getPutBlock().toBuilder()
+                  .setBlockData(malformedBlockData))
+              .build();
+
+      ContainerCommandResponseProto response =
+          hddsDispatcher.dispatch(malformedPutBlockRequest, null);
+      assertEquals(ContainerProtos.Result.MALFORMED_REQUEST, response.getResult());
+
+      Container container = hddsDispatcher.getContainer(1L);
+      assertNotNull(container);
+      assertTrue(container.getContainerData().isOpen());
+      assertFalse(container.getContainerData().isUnhealthy());
+    } finally {
+      ContainerMetrics.remove();
+    }
   }
 
   @Test

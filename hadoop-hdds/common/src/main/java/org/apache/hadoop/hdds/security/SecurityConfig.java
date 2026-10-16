@@ -104,6 +104,7 @@ public class SecurityConfig {
   private static final Logger LOG =
       LoggerFactory.getLogger(SecurityConfig.class);
   private static volatile Provider provider;
+  private final ConfigurationSource configuration;
   private final int size;
   private final String keyAlgo;
   private final String providerString;
@@ -144,6 +145,7 @@ public class SecurityConfig {
    */
   public SecurityConfig(ConfigurationSource configuration) {
     Preconditions.checkNotNull(configuration, "Configuration cannot be null");
+    this.configuration = configuration;
     this.size = configuration.getInt(HDDS_KEY_LEN, HDDS_DEFAULT_KEY_LEN);
     this.keyAlgo = configuration.get(HDDS_KEY_ALGORITHM,
         HDDS_DEFAULT_KEY_ALGORITHM);
@@ -484,6 +486,10 @@ public class SecurityConfig {
    */
   public String getKeyAlgo() {
     return keyAlgo;
+  }
+
+  public ConfigurationSource getConfiguration() {
+    return configuration;
   }
 
   public KeyCodec keyCodec() throws IOException {

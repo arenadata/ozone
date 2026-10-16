@@ -19,6 +19,7 @@ package org.apache.hadoop.hdds.security.x509.certificate.client;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_DATANODE_HOST_NAME_KEY;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_METADATA_DIR_NAME;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_NEW_KEY_CERT_DIR_NAME_SUFFIX;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_NAMES;
@@ -65,6 +66,7 @@ import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateSignReq
 import org.apache.hadoop.hdds.security.x509.exception.CertificateException;
 import org.apache.hadoop.hdds.security.x509.keys.HDDSKeyGenerator;
 import org.apache.hadoop.hdds.security.x509.keys.KeyStorage;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.ozone.test.GenericTestUtils.LogCapturer;
 import org.junit.jupiter.api.AfterEach;
@@ -94,6 +96,7 @@ public class TestDefaultCertificateClient {
     OzoneConfiguration config = new OzoneConfiguration();
     config.setStrings(OZONE_SCM_NAMES, "localhost");
     config.setInt(IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 2);
+    config.set(HDDS_DATANODE_HOST_NAME_KEY, "localhost");
 
     config.set(HDDS_METADATA_DIR_NAME, dnMetaDirPath.toString());
     dnSecurityConfig = new SecurityConfig(config);
@@ -116,6 +119,28 @@ public class TestDefaultCertificateClient {
     dnCertClient = new DNCertificateClient(dnSecurityConfig, scmSecurityClient,
         MockDatanodeDetails.randomDatanodeDetails(), certSerialId, null,
         () -> System.exit(1));
+  }
+
+  @Test
+  public void testConfigureCSRBuilderUsesConfiguredHostname()
+      throws Exception {
+    OzoneConfiguration config = new OzoneConfiguration();
+    config.set(HDDS_DATANODE_HOST_NAME_KEY, "myhost");
+    config.set(HDDS_METADATA_DIR_NAME, dnMetaDirPath.toString());
+
+    DNCertificateClient client = new DNCertificateClient(
+        new SecurityConfig(config), null,
+        MockDatanodeDetails.randomDatanodeDetails(), null, null,
+        () -> System.exit(1));
+
+    LogCapturer dnLogs = LogCapturer.captureLogs(DNCertificateClient.class);
+    try {
+      client.configureCSRBuilder();
+      assertTrue(dnLogs.getOutput().contains(
+          UserGroupInformation.getCurrentUser().getShortUserName() + "@myhost"));
+    } finally {
+      dnLogs.stopCapturing();
+    }
   }
 
   @AfterEach

@@ -20,9 +20,9 @@ package org.apache.hadoop.hdds.security.x509.certificate.client;
 import static org.apache.hadoop.hdds.security.x509.exception.CertificateException.ErrorCode.CSR_ERROR;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.security.KeyPair;
 import java.util.function.Consumer;
+import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos.SCMGetCertResponseProto;
 import org.apache.hadoop.hdds.protocolPB.SCMSecurityProtocolClientSideTranslatorPB;
@@ -71,7 +71,8 @@ public class DNCertificateClient extends DefaultCertificateClient {
     CertificateSignRequest.Builder builder = super.configureCSRBuilder();
 
     try {
-      String hostname = InetAddress.getLocalHost().getCanonicalHostName();
+      String hostname = HddsUtils.getHostName(
+          getSecurityConfig().getConfiguration());
       String subject = UserGroupInformation.getCurrentUser()
           .getShortUserName() + "@" + hostname;
       builder.setCA(false)

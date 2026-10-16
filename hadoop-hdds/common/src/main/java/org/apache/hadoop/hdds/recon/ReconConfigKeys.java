@@ -35,6 +35,8 @@ public final class ReconConfigKeys {
       "ozone.recon.datanode.address";
   public static final String OZONE_RECON_ADDRESS_KEY =
       "ozone.recon.address";
+  public static final String OZONE_RECON_HOSTNAME_KEY =
+      "ozone.recon.hostname";
   // Fully qualified heatmap provider implementation class name key.
   public static final String OZONE_RECON_HEATMAP_PROVIDER_KEY =
       "ozone.recon.heatmap.provider";

@@ -46,7 +46,6 @@ import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.scm.container.ContainerNotFoundException;
 import org.apache.hadoop.hdds.scm.container.ContainerReplica;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
-import org.apache.hadoop.ozone.common.statemachine.InvalidStateTransitionException;
 import org.apache.hadoop.ozone.recon.metrics.ContainerHealthMetrics;
 import org.apache.hadoop.ozone.recon.persistence.ContainerHealthSchemaManager;
 import org.apache.hadoop.ozone.recon.scm.ReconScmTask;
@@ -434,9 +433,6 @@ public class ContainerHealthTask extends ReconScmTask {
         }
         return true;
       }
-    } catch (InvalidStateTransitionException e) {
-      LOG.error("Failed to transition Container state while processing " +
-          "container in Container Health task", e);
     } catch (IOException e) {
       LOG.error("Got exception while processing container in" +
           " Container Health task", e);
