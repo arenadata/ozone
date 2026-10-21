@@ -45,6 +45,7 @@ import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneClientStub;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
+import org.apache.hadoop.ozone.s3.HeaderPreprocessor;
 import org.apache.hadoop.ozone.s3.exception.OS3Exception;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -58,6 +59,7 @@ public class TestObjectGet {
   private static final String BUCKET_NAME = "b1";
   private static final String KEY_NAME = "key1";
   private static final String KEY_WITH_TAG = "keyWithTag";
+  private static final String TYPED_KEY_NAME = "typedKey";
   public static final String CONTENT_TYPE1 = "video/mp4";
   public static final String CONTENT_TYPE2 = "text/html; charset=UTF-8";
   public static final String CONTENT_LANGUAGE1 = "en-CA";
@@ -155,7 +157,8 @@ public class TestObjectGet {
 
     Response response = rest.get(BUCKET_NAME, KEY_NAME, 0, null, 0, null, null);
 
-    assertEquals(CONTENT_TYPE1,
+    // Content-Type is not inherited from the request; key1 has none stored.
+    assertEquals("binary/octet-stream",
         response.getHeaderString("Content-Type"));
     assertEquals(CONTENT_LANGUAGE1,
         response.getHeaderString("Content-Language"));
@@ -238,6 +241,49 @@ public class TestObjectGet {
     assertEquals(response.getStatus(),
         Response.Status.PARTIAL_CONTENT.getStatusCode());
     assertNull(response.getHeaderString(TAG_COUNT_HEADER));
+  }
+
+  @Test
+  public void getAndHeadReturnStoredContentType()
+      throws IOException, OS3Exception {
+    putTypedKey(CONTENT_TYPE1);
+
+    assertEquals(CONTENT_TYPE1, rest.get(BUCKET_NAME, TYPED_KEY_NAME, 0, null, 0, null, null)
+        .getHeaderString("Content-Type"));
+    assertEquals(CONTENT_TYPE1, rest.head(BUCKET_NAME, TYPED_KEY_NAME)
+        .getHeaderString("Content-Type"));
+
+    // An object stored without a Content-Type falls back to the default.
+    assertEquals("binary/octet-stream", rest.get(BUCKET_NAME, KEY_NAME, 0, null, 0, null, null)
+        .getHeaderString("Content-Type"));
+    assertEquals("binary/octet-stream", rest.head(BUCKET_NAME, KEY_NAME)
+        .getHeaderString("Content-Type"));
+  }
+
+  @Test
+  public void getIgnoresRequestContentTypeUsesStored()
+      throws IOException, OS3Exception {
+    putTypedKey(CONTENT_TYPE1);
+
+    doReturn(CONTENT_TYPE2).when(headers).getHeaderString("Content-Type");
+    assertEquals(CONTENT_TYPE1, rest.get(BUCKET_NAME, TYPED_KEY_NAME, 0, null, 0, null, null)
+        .getHeaderString("Content-Type"));
+    assertEquals("binary/octet-stream", rest.get(BUCKET_NAME, KEY_NAME, 0, null, 0, null, null)
+        .getHeaderString("Content-Type"));
+
+    context.getUriInfo().getQueryParameters()
+        .putSingle("response-content-type", CONTENT_TYPE2);
+    assertEquals(CONTENT_TYPE2, rest.get(BUCKET_NAME, TYPED_KEY_NAME, 0, null, 0, null, null)
+        .getHeaderString("Content-Type"));
+  }
+
+  private void putTypedKey(String contentType) throws IOException, OS3Exception {
+    when(headers.getHeaderString(HeaderPreprocessor.ORIGINAL_CONTENT_TYPE))
+        .thenReturn(contentType);
+    rest.put(BUCKET_NAME, TYPED_KEY_NAME, CONTENT.length(), 1, null, null, null,
+        new ByteArrayInputStream(CONTENT.getBytes(UTF_8)));
+    when(headers.getHeaderString(HeaderPreprocessor.ORIGINAL_CONTENT_TYPE))
+        .thenReturn(null);
   }
 
   private void setDefaultHeader() {
