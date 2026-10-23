@@ -75,6 +75,7 @@ import org.apache.hadoop.ozone.client.OzoneKeyDetails;
 import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.om.helpers.BucketLayout;
+import org.apache.hadoop.ozone.s3.HeaderPreprocessor;
 import org.apache.hadoop.ozone.s3.exception.OS3Exception;
 import org.apache.hadoop.ozone.s3.exception.S3ErrorTable;
 import org.apache.http.HttpStatus;
@@ -536,6 +537,40 @@ class TestObjectPut {
         "nonexistent", KEY_NAME, CONTENT.length(), 1, null, null, null, body),
         "test copy object failed");
     assertThat(e.getCode()).contains("NoSuchBucket");
+  }
+
+  @Test
+  void testContentTypeStoredAndCopied() throws Exception {
+    // PUT with an explicit Content-Type (preserved by HeaderPreprocessor).
+    when(headers.getHeaderString(HeaderPreprocessor.ORIGINAL_CONTENT_TYPE))
+        .thenReturn("audio/mpeg");
+    objectEndpoint.put(BUCKET_NAME, KEY_NAME, CONTENT.length(), 1, null, null, null,
+        new ByteArrayInputStream(CONTENT.getBytes(UTF_8)));
+    assertEquals("audio/mpeg",
+        bucket.getKey(KEY_NAME).getMetadata().get(HttpHeaders.CONTENT_TYPE));
+
+    // COPY directive: destination keeps the source Content-Type, ignoring the
+    // Content-Type on the copy request.
+    when(headers.getHeaderString(CUSTOM_METADATA_COPY_DIRECTIVE_HEADER))
+        .thenReturn("COPY");
+    when(headers.getHeaderString(COPY_SOURCE_HEADER))
+        .thenReturn(BUCKET_NAME + "/" + urlEncode(KEY_NAME));
+    when(headers.getHeaderString(HeaderPreprocessor.ORIGINAL_CONTENT_TYPE))
+        .thenReturn("text/plain");
+    objectEndpoint.put(DEST_BUCKET_NAME, DEST_KEY, CONTENT.length(), 1, null, null, null, null);
+    OzoneBucket destBucket = clientStub.getObjectStore().getS3Bucket(DEST_BUCKET_NAME);
+    assertEquals("audio/mpeg",
+        destBucket.getKey(DEST_KEY).getMetadata().get(HttpHeaders.CONTENT_TYPE));
+
+    // REPLACE directive: destination takes the Content-Type from the request.
+    when(headers.getHeaderString(CUSTOM_METADATA_COPY_DIRECTIVE_HEADER))
+        .thenReturn("REPLACE");
+    when(headers.getRequestHeaders()).thenReturn(new MultivaluedHashMap<>());
+    when(headers.getHeaderString(HeaderPreprocessor.ORIGINAL_CONTENT_TYPE))
+        .thenReturn("application/json");
+    objectEndpoint.put(DEST_BUCKET_NAME, DEST_KEY, CONTENT.length(), 1, null, null, null, null);
+    assertEquals("application/json",
+        destBucket.getKey(DEST_KEY).getMetadata().get(HttpHeaders.CONTENT_TYPE));
   }
 
   @Test

@@ -152,6 +152,9 @@ import org.slf4j.LoggerFactory;
 @Path("/{bucket}/{path:.+}")
 public class ObjectEndpoint extends EndpointBase {
 
+  // Default Content-Type for objects stored without one, matching S3.
+  private static final String DEFAULT_CONTENT_TYPE = "binary/octet-stream";
+
   private static final Logger LOG =
       LoggerFactory.getLogger(ObjectEndpoint.class);
 
@@ -186,7 +189,6 @@ public class ObjectEndpoint extends EndpointBase {
 
   public ObjectEndpoint() {
     overrideQueryParameter = ImmutableMap.<String, String>builder()
-        .put("Content-Type", "response-content-type")
         .put("Content-Language", "response-content-language")
         .put("Expires", "response-expires")
         .put("Cache-Control", "response-cache-control")
@@ -317,6 +319,7 @@ public class ObjectEndpoint extends EndpointBase {
 
       Map<String, String> customMetadata =
           getCustomMetadataFromHeaders(headers.getRequestHeaders());
+      putContentType(customMetadata);
       Map<String, String> tags = getTaggingFromHeaders(headers);
 
       long putLength;
@@ -539,6 +542,14 @@ public class ObjectEndpoint extends EndpointBase {
       MultivaluedMap<String, String> queryParams = context
           .getUriInfo().getQueryParameters();
 
+      // Content-Type comes from the stored object, not the request header;
+      // response-content-type still overrides it.
+      String contentType = queryParams.getFirst("response-content-type");
+      if (contentType == null) {
+        contentType = contentTypeOf(keyDetails);
+      }
+      responseBuilder.header(HttpHeaders.CONTENT_TYPE, contentType);
+
       for (Map.Entry<String, String> entry :
           overrideQueryParameter.entrySet()) {
         String headerValue = headers.getHeaderString(entry.getKey());
@@ -597,6 +608,19 @@ public class ObjectEndpoint extends EndpointBase {
     responseBuilder
         .header(LAST_MODIFIED,
             RFC1123Util.FORMAT.format(lastModificationTime));
+  }
+
+  private void putContentType(Map<String, String> metadata) {
+    String contentType =
+        headers.getHeaderString(HeaderPreprocessor.ORIGINAL_CONTENT_TYPE);
+    if (contentType != null) {
+      metadata.put(HttpHeaders.CONTENT_TYPE, contentType);
+    }
+  }
+
+  private static String contentTypeOf(OzoneKey key) {
+    String contentType = key.getMetadata().get(HttpHeaders.CONTENT_TYPE);
+    return contentType != null ? contentType : DEFAULT_CONTENT_TYPE;
   }
 
   static void addTagCountIfAny(
@@ -659,7 +683,7 @@ public class ObjectEndpoint extends EndpointBase {
 
     ResponseBuilder response = Response.ok().status(HttpStatus.SC_OK)
         .header("Content-Length", key.getDataSize())
-        .header("Content-Type", "binary/octet-stream")
+        .header("Content-Type", contentTypeOf(key))
         .header(STORAGE_CLASS_HEADER, s3StorageType.toString());
 
     String eTag = key.getMetadata().get(ETAG);
@@ -835,6 +859,7 @@ public class ObjectEndpoint extends EndpointBase {
 
       Map<String, String> customMetadata =
           getCustomMetadataFromHeaders(headers.getRequestHeaders());
+      putContentType(customMetadata);
 
       Map<String, String> tags = getTaggingFromHeaders(headers);
 
@@ -1316,6 +1341,8 @@ public class ObjectEndpoint extends EndpointBase {
       } else if (metadataCopyDirective.equals(CopyDirective.REPLACE.name())) {
         // Replace the metadata with the metadata form the request headers
         customMetadata = getCustomMetadataFromHeaders(headers.getRequestHeaders());
+        // REPLACE: Content-Type comes from the request, not the source.
+        putContentType(customMetadata);
       } else {
         OS3Exception ex = newError(INVALID_ARGUMENT, metadataCopyDirective);
         ex.setErrorMessage("An error occurred (InvalidArgument) " +

@@ -20,12 +20,20 @@ package org.apache.hadoop.ozone.s3.endpoint;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_FSO_DIRECTORY_CREATION_ENABLED;
+import static org.apache.hadoop.ozone.s3.util.S3Consts.CUSTOM_METADATA_HEADER_PREFIX;
+import static org.apache.hadoop.ozone.s3.util.S3Consts.X_AMZ_CONTENT_SHA256;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.MultivaluedHashMap;
+import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.hdds.client.ReplicationConfig;
@@ -36,6 +44,7 @@ import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneClientStub;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
+import org.apache.hadoop.ozone.s3.HeaderPreprocessor;
 import org.apache.hadoop.ozone.s3.exception.OS3Exception;
 import org.apache.http.HttpStatus;
 import org.junit.jupiter.api.BeforeEach;
@@ -184,5 +193,43 @@ public class TestObjectHead {
     // THEN
     assertEquals(HttpStatus.SC_NOT_FOUND, response.getStatus());
     bucket.deleteKey(keyPath);
+  }
+
+  @Test
+  public void testHeadSeparatesUserContentTypeMetadataFromObjectContentType()
+      throws Exception {
+    String keyName = "typed-with-user-meta";
+    String objectContentType = "image/jpeg";
+    String userContentType = "user/custom-type";
+    String content = "head-content";
+
+    // PUT with both the object's Content-Type and a colliding user
+    // x-amz-meta-content-type.
+    HttpHeaders headers = mock(HttpHeaders.class);
+    when(headers.getHeaderString(X_AMZ_CONTENT_SHA256)).thenReturn("mockSignature");
+    when(headers.getHeaderString(HeaderPreprocessor.ORIGINAL_CONTENT_TYPE))
+        .thenReturn(objectContentType);
+    MultivaluedMap<String, String> requestHeaders = new MultivaluedHashMap<>();
+    requestHeaders.putSingle(
+        CUSTOM_METADATA_HEADER_PREFIX + "content-type", userContentType);
+    when(headers.getRequestHeaders()).thenReturn(requestHeaders);
+    keyEndpoint.setHeaders(headers);
+    keyEndpoint.put(bucketName, keyName, content.length(), 1, null, null, null,
+        new ByteArrayInputStream(content.getBytes(UTF_8)));
+
+    // The user value is remapped, so the object's Content-Type is preserved.
+    assertEquals(objectContentType,
+        bucket.getKey(keyName).getMetadata().get(HttpHeaders.CONTENT_TYPE));
+
+    // HEAD returns the object Content-Type as the standard header and the user
+    // value as x-amz-meta-content-type.
+    Response response = keyEndpoint.head(bucketName, keyName);
+    assertEquals(HttpStatus.SC_OK, response.getStatus());
+    assertEquals(objectContentType,
+        response.getHeaderString(HttpHeaders.CONTENT_TYPE));
+    assertEquals(userContentType,
+        response.getHeaderString(CUSTOM_METADATA_HEADER_PREFIX + "content-type"));
+    assertThat(response.getHeaders().keySet())
+        .noneMatch(header -> header.toLowerCase().contains("ozone-s3-internal"));
   }
 }

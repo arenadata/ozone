@@ -535,6 +535,49 @@ public abstract class AbstractS3SDKV2Tests extends OzoneTestBase {
     }
 
     @Test
+    public void testPresignedUrlGetReturnsMultipartContentType() throws Exception {
+      final String keyName = getKeyName();
+      final String contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+      CreateMultipartUploadResponse createResponse = s3Client.createMultipartUpload(b -> b
+          .bucket(BUCKET_NAME)
+          .key(keyName)
+          .contentType(contentType));
+      String uploadId = createResponse.uploadId();
+      UploadPartResponse partResponse = s3Client.uploadPart(b -> b
+              .bucket(BUCKET_NAME)
+              .key(keyName)
+              .uploadId(uploadId)
+              .partNumber(1),
+          RequestBody.fromString(CONTENT));
+      s3Client.completeMultipartUpload(b -> b
+          .bucket(BUCKET_NAME)
+          .key(keyName)
+          .uploadId(uploadId)
+          .multipartUpload(m -> m.parts(CompletedPart.builder().partNumber(1).eTag(partResponse.eTag()).build())));
+
+      GetObjectRequest objectRequest = GetObjectRequest.builder().bucket(BUCKET_NAME).key(keyName).build();
+      GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
+          .signatureDuration(duration)
+          .getObjectRequest(objectRequest)
+          .build();
+      URL presignedUrl = presigner.presignGetObject(presignRequest).url();
+
+      // A browser navigation: the stored Content-Type must win over Accept negotiation.
+      Map<String, List<String>> browserHeaders = Collections.singletonMap("Accept", Collections.singletonList(
+          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"));
+      HttpURLConnection connection = S3SDKTestUtils.openHttpURLConnection(presignedUrl, "GET", browserHeaders, null);
+      try {
+        assertEquals(200, connection.getResponseCode());
+        assertEquals(contentType, connection.getContentType());
+      } finally {
+        connection.disconnect();
+      }
+
+      assertEquals(contentType, s3Client.headObject(b -> b.bucket(BUCKET_NAME).key(keyName)).contentType());
+    }
+
+    @Test
     public void testPresignedUrlHead() throws Exception {
       final String keyName = getKeyName();
 

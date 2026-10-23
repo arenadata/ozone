@@ -35,13 +35,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import javax.ws.rs.container.ContainerRequestContext;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MultivaluedHashMap;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.UriInfo;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneClientStub;
+import org.apache.hadoop.ozone.s3.HeaderPreprocessor;
 import org.apache.hadoop.ozone.s3.endpoint.CompleteMultipartUploadRequest.Part;
 import org.apache.hadoop.ozone.s3.exception.OS3Exception;
 import org.apache.hadoop.ozone.s3.exception.S3ErrorTable;
@@ -197,6 +200,36 @@ public class TestMultipartUploadComplete {
 
     assertEquals("custom-value1", headResponse.getHeaderString(CUSTOM_METADATA_HEADER_PREFIX + "custom-key1"));
     assertEquals("custom-value2", headResponse.getHeaderString(CUSTOM_METADATA_HEADER_PREFIX + "custom-key2"));
+  }
+
+  @Test
+  public void testMultipartStoresContentType() throws Exception {
+    String key = UUID.randomUUID().toString();
+    String contentType =
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+    // Content-Type set on CreateMultipartUpload is preserved as
+    // ORIGINAL_CONTENT_TYPE and must survive to the completed object.
+    when(headers.getHeaderString(HeaderPreprocessor.ORIGINAL_CONTENT_TYPE))
+        .thenReturn(contentType);
+    String uploadID = initiateMultipartUpload(key);
+    Part part1 = uploadPart(key, uploadID, 1, "Multipart Upload 1");
+    CompleteMultipartUploadRequest completeMultipartUploadRequest =
+        new CompleteMultipartUploadRequest();
+    completeMultipartUploadRequest.setPartList(Collections.singletonList(part1));
+    when(headers.getHeaderString(HeaderPreprocessor.ORIGINAL_CONTENT_TYPE))
+        .thenReturn(null);
+    completeMultipartUpload(key, completeMultipartUploadRequest, uploadID);
+
+    ContainerRequestContext context = mock(ContainerRequestContext.class);
+    when(context.getUriInfo()).thenReturn(mock(UriInfo.class));
+    when(context.getUriInfo().getQueryParameters())
+        .thenReturn(new MultivaluedHashMap<>());
+    rest.setContext(context);
+    assertEquals(contentType, rest.get(OzoneConsts.S3_BUCKET, key, 0, null, 0, null, null)
+        .getHeaderString(HttpHeaders.CONTENT_TYPE));
+    assertEquals(contentType, rest.head(OzoneConsts.S3_BUCKET, key)
+        .getHeaderString(HttpHeaders.CONTENT_TYPE));
   }
 
   @Test
