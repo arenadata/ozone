@@ -69,7 +69,7 @@ jobs:
       # keeps the retry settings and deploys into the sandbox.
       - name: Redirect the publisher to a sandbox
         id: sandbox
-        uses: arenadata/adrm-checks/actions/sandbox@6be18fed3f222b843af0e9fcbf8bc7306047dedd
+        uses: arenadata/adrm-checks/actions/sandbox@1e0cfbd8e03ee73c94739ceaaba3a85b7d9775f2
         with:
           tool: maven
           deploy-plugin-major: '3'   # maven-deploy-plugin 3.1.4 is invoked explicitly below
@@ -79,7 +79,7 @@ jobs:
 
       - name: Generate the manifest from the sandbox
         id: manifest
-        uses: arenadata/adrm-checks/actions/manifest@6be18fed3f222b843af0e9fcbf8bc7306047dedd
+        uses: arenadata/adrm-checks/actions/manifest@1e0cfbd8e03ee73c94739ceaaba3a85b7d9775f2
         with:
           sandbox: ${{ steps.sandbox.outputs.dir }}
           invocations: '1'
