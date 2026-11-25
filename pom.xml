@@ -16,7 +16,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.apache.ozone</groupId>
   <artifactId>ozone-main</artifactId>
-  <version>2.1.2.1-4.5.0-0</version>
+  <version>2.1.2.1-4.5.0-1</version>
   <packaging>pom</packaging>
   <name>Apache Ozone Main</name>
   <description>Apache Ozone Main</description>
@@ -67,7 +67,7 @@
     <commons-validator.version>1.10.0</commons-validator.version>
     <compile-testing.version>0.23.0</compile-testing.version>
     <copy-rename-maven-plugin.version>1.0.1</copy-rename-maven-plugin.version>
-    <curator.version>5.9.0.2-4.4.0-0</curator.version>
+    <curator.version>5.9.0.3-4.5.0-2</curator.version>
     <cyclonedx.version>2.9.1</cyclonedx.version>
     <!-- the version of Hadoop declared in the version resources; can be overridden
     so that Hadoop 3.x can declare itself a 2.x artifact. -->
@@ -97,13 +97,13 @@
     <gson.version>2.13.1</gson.version>
     <guava.version>33.5.0-jre</guava.version>
     <guice.version>6.0.0</guice.version>
-    <hadoop-maven-plugins.version>3.4.2</hadoop-maven-plugins.version>
+    <hadoop-maven-plugins.version>3.4.3.3-4.5.0-1</hadoop-maven-plugins.version>
     <!-- Acceptance tests use public Apache Hadoop Docker/source artifacts.
          Downstream Hadoop Maven dependencies remain on hadoop.version. -->
     <hadoop.acceptance.version>3.4.3</hadoop.acceptance.version>
-    <!-- Arenadata Hadoop does not expose hadoop-kms tests classifier to CI. -->
-    <hadoop.kms.tests.version>3.4.3</hadoop.kms.tests.version>
-    <hadoop.version>3.4.3.2-4.4.0-1</hadoop.version>
+    <!-- MiniKMS must use the same Hadoop release as its runtime classes. -->
+    <hadoop.kms.tests.version>${hadoop.version}</hadoop.kms.tests.version>
+    <hadoop.version>3.4.3.3-4.5.0-1</hadoop.version>
     <hadoop2.version>2.10.2</hadoop2.version>
     <hamcrest.version>2.2</hamcrest.version>
     <hdds.rocks.native.version>${hdds.version}</hdds.rocks.native.version>
@@ -189,7 +189,7 @@
     <ozone.release>Joshua Tree</ozone.release>
     <ozone.shaded.native.prefix>org_apache_ozone_shaded</ozone.shaded.native.prefix>
     <ozone.shaded.prefix>org.apache.ozone.shaded</ozone.shaded.prefix>
-    <ozone.version>2.1.2.1-4.5.0-0</ozone.version>
+    <ozone.version>2.1.2.1-4.5.0-1</ozone.version>
     <picocli.version>4.7.7</picocli.version>
     <plexus-archiver.version>4.2.2</plexus-archiver.version>
     <pmd.version>3.26.0</pmd.version>
@@ -203,7 +203,7 @@
     <proto-backwards-compatibility.version>1.0.7</proto-backwards-compatibility.version>
     <protobuf-maven-plugin.version>0.6.1</protobuf-maven-plugin.version>
     <protobuf.version>3.25.9</protobuf.version>
-    <ranger.version>2.6.0.8-2.3.0-4</ranger.version>
+    <ranger.version>2.6.0.9-2.4.0-1</ranger.version>
     <!-- versions included in ratis-thirdparty, update in sync -->
     <ratis-thirdparty.grpc.version>1.82.1</ratis-thirdparty.grpc.version>
     <ratis-thirdparty.netty.version>4.1.136.Final</ratis-thirdparty.netty.version>
@@ -241,7 +241,7 @@
     <vault.driver.version>5.1.0</vault.driver.version>
     <weld-servlet.version>3.1.9.Final</weld-servlet.version>
     <woodstox.version>5.4.0</woodstox.version>
-    <zookeeper.version>3.9.5.2-4.4.0-1</zookeeper.version>
+    <zookeeper.version>3.9.5.3-4.5.0-2</zookeeper.version>
     <zstd-jni.version>1.5.7-7</zstd-jni.version>
   </properties>
 
